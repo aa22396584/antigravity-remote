@@ -1,5 +1,5 @@
 name: antigravity_remote
-description: "A new Flutter project."
+description: "Next-gen cross-platform native remote deck for Antigravity (Google Jetski) editor with Dual-Transport (Cloud Relay + WebRTC P2P Mesh), NIST P-256 handshake, and live Cascade control."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev

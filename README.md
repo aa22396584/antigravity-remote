@@ -14,7 +14,7 @@
 [![Security](https://img.shields.io/badge/ECDSA-NIST_P--256-00E676?style=for-the-badge)](https://csrc.nist.gov)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
 
-[繁體中文](#-繁體中文說明) • [English](#-english-documentation)
+[繁體中文](#-繁體中文說明) • [English](#-english-documentation) • [架構 (Architecture)](#-核心架構亮點) • [截圖 (Screenshots)](#-介面截圖預覽) • [快速開始 (Quick Start)](#-快速開始-getting-started)
 
 ---
 
@@ -77,6 +77,35 @@ graph TD
 
 ---
 
+<a name="-介面截圖預覽"></a>
+### 📱 介面截圖預覽 (UI Screenshots & Deck Previews)
+
+為提供無與倫比的遠端操縱手感，Antigravity Remote 採用 Cyber-Command 深空暗色主題，整合三大核心控制模組：
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center" width="33%">
+        <b>🧠 Cascade 思考串流與指令審批</b><br/>
+        <sub>即時神經脈衝、思維耗時與危險指令審批</sub><br/><br/>
+        <img src="docs/screenshots/cascade_deck.png" width="100%" alt="Cascade Deck & Approval" />
+      </td>
+      <td align="center" width="33%">
+        <b>💻 遠端即時終端控制台</b><br/>
+        <sub>串流終端日誌、虛擬快捷晶片鍵盤</sub><br/><br/>
+        <img src="docs/screenshots/terminal_deck.png" width="100%" alt="Terminal Monitor & Quick Keys" />
+      </td>
+      <td align="center" width="33%">
+        <b>📡 裝置中樞與雙軌狀態</b><br/>
+        <sub>NIST P-256 指紋、延遲儀表與 QR 掃描</sub><br/><br/>
+        <img src="docs/screenshots/device_hub.png" width="100%" alt="Device Hub & Mesh Topology" />
+      </td>
+    </tr>
+  </table>
+</div>
+
+---
+
 ### ✨ 主要功能特色
 
 | 功能模組 | 特色描述 |
@@ -134,6 +163,30 @@ Reverse-engineered from the Antigravity local binary daemon (`language_server`),
 - 💻 **Live Remote Terminal**: Continuous terminal output streaming with specialized virtual keys (`Ctrl+C`, `Enter`, `Tab`, `clear`) and input transmission.
 - 🧪 **Built-in Offline Demo Mode**: High-fidelity simulator (`MockAntigravityService`) enabling comprehensive hands-on evaluation without an active desktop connection.
 
+#### 3. Deck Previews & UI Screenshots
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center" width="33%">
+        <b>🧠 Cascade Stream & Approval</b><br/>
+        <sub>Live neural pulses, thought duration & security modals</sub><br/><br/>
+        <img src="docs/screenshots/cascade_deck.png" width="100%" alt="Cascade Stream & Approval" />
+      </td>
+      <td align="center" width="33%">
+        <b>💻 Live Remote Terminal</b><br/>
+        <sub>Live terminal logs, cyber virtual keypad</sub><br/><br/>
+        <img src="docs/screenshots/terminal_deck.png" width="100%" alt="Live Remote Terminal" />
+      </td>
+      <td align="center" width="33%">
+        <b>📡 Device Hub & Telemetry</b><br/>
+        <sub>NIST P-256 fingerprint, latency gauge & QR pairing</sub><br/><br/>
+        <img src="docs/screenshots/device_hub.png" width="100%" alt="Device Hub & Telemetry" />
+      </td>
+    </tr>
+  </table>
+</div>
+
 ---
 
 ## 📂 專案目錄結構 (Project Structure)
@@ -142,9 +195,16 @@ Reverse-engineered from the Antigravity local binary daemon (`language_server`),
 antigravity_remote/
 ├── assets/
 │   └── images/
-│       └── banner.png                      # Cyber-command repository banner
+│       ├── banner.png                      # Cyber-command repository banner
+│       ├── cascade_deck.png                # Cascade thought & approval preview
+│       ├── device_hub.png                  # Device pairing & telemetry preview
+│       └── terminal_deck.png               # Live terminal console preview
 ├── docs/
-│   └── banner.png                          # Documentation preview image
+│   ├── banner.png                          # Documentation preview banner
+│   └── screenshots/                        # Deck screenshot previews
+│       ├── cascade_deck.png
+│       ├── device_hub.png
+│       └── terminal_deck.png
 ├── lib/
 │   ├── main.dart                           # Application entry point & Riverpod root
 │   ├── app.dart                            # Dark Cyber Theme & Adaptive Layout
