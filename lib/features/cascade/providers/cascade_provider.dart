@@ -68,7 +68,10 @@ class CascadeNotifier extends Notifier<CascadeState> {
           '- 即時監控本機 Agent 執行進度與內部思考思維\n'
           '- 審批與核准終端指令執行（`run_command`）與檔案編輯\n'
           '- 直接在手機/平板發送 Prompt 引導桌面端編程',
-      thinking: '遠端雙軌連線已初始化，通道安全檢查完畢。',
+      thinking: '正在連線至本機 LanguageServer (ConnectRPC)...\n'
+          '雙軌傳輸通道已就緒 (WebRTC P2P Mesh <20ms / Cloud Relay 備援)。\n'
+          'NIST P-256 安全挑戰已通過驗證，進入遠端調度狀態。',
+      thinkingDuration: const Duration(seconds: 1, milliseconds: 240),
       isThinking: false,
       timestamp: DateTime.now().subtract(const Duration(minutes: 1)),
     );

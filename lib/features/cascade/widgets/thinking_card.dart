@@ -6,12 +6,14 @@ class ThinkingCard extends StatefulWidget {
   final String thinking;
   final bool isThinking;
   final Duration? duration;
+  final bool initiallyExpanded;
 
   const ThinkingCard({
     super.key,
     required this.thinking,
     this.isThinking = false,
     this.duration,
+    this.initiallyExpanded = false,
   });
 
   @override
@@ -27,7 +29,7 @@ class _ThinkingCardState extends State<ThinkingCard>
   @override
   void initState() {
     super.initState();
-    _isExpanded = widget.isThinking; // 思考中預設展開
+    _isExpanded = widget.isThinking || widget.initiallyExpanded;
 
     _pulseController = AnimationController(
       vsync: this,

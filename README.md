@@ -27,6 +27,7 @@
 
 ---
 
+<a name="-核心架構亮點"></a>
 ### 🌟 核心架構亮點 (Architecture Highlights)
 
 #### 1. 系統架構拓撲 (System Architecture Topology)
@@ -109,7 +110,7 @@ flowchart TD
     DTM -->|"協商握手 (SDP / ICE)"| Signal
     Signal <-->|"信令中繼"| LS
 
-    DTM <-->|"軌道 2: WebRTC P2P 直連 (延遲 &lt; 20ms)"| P2PChannel
+    DTM <-->|"軌道 2: WebRTC P2P 直連 (延遲低於 20ms)"| P2PChannel
     P2PChannel --> LS
 ```
 
@@ -186,7 +187,7 @@ sequenceDiagram
     Client->>Client: 使用純 Dart ECDSA P-256 私鑰對 Nonce 計算簽章 (DER 格式)
     Client->>Host: 回傳 Nonce 簽章回應
     Host->>Host: 桌面端以已登錄的 Client 公鑰驗簽
-    Note over Client,Host: 驗證通過：解鎖最高權限遠端控制通道 (延遲 < 20ms)
+    Note over Client,Host: 驗證通過：解鎖最高權限遠端控制通道 (延遲低於 20ms)
 ```
 
 ---
@@ -337,7 +338,7 @@ flowchart TD
     DTM -->|"Signaling Handshake (SDP / ICE)"| Signal
     Signal <-->|"Signaling Relay"| LS
 
-    DTM <-->|"Track 2: WebRTC P2P Direct (Latency &lt; 20ms)"| P2PChannel
+    DTM <-->|"Track 2: WebRTC P2P Direct (Sub-20ms Latency)"| P2PChannel
     P2PChannel --> LS
 ```
 
@@ -411,18 +412,13 @@ sequenceDiagram
     Client->>Client: Sign Nonce using pure Dart ECDSA P-256 private key (DER format)
     Client->>Host: Submit Nonce Challenge Signature Response
     Host->>Host: Verify signature with enrolled Client Public Key
-    Note over Client,Host: Verification Succeeded: Promoted to trusted high-speed P2P pipe (<20ms)
+    Note over Client,Host: Verification Succeeded: Promoted to trusted high-speed P2P pipe (Sub-20ms latency)
 ```
 
-#### 2. Feature Matrix
-- 📸 **Instant QR Code Pairing**: Supports Google AccountChooser URLs, deep links (`antigravity://`), configuration JSON, and raw instance UUIDs.
-- 🧠 **Cascade Reactive Thought Streaming**: Neural pulse animation displaying agent reasoning in real-time (`ThinkingCard`) with precise duration timing.
-- 🛠️ **Trajectory Step Cards & Diff Viewer**: Live status of tool executions (`run_command`, `replace_file_content`, etc.) and syntax-highlighted code diffs.
-- 🛡️ **Interactive Safety Approvals**: Action sheet prompts when an agent requires authorization (`WAITING_USER_INTERACTION`) with security flags for destructive commands.
-- 💻 **Live Remote Terminal**: Continuous terminal output streaming with specialized virtual keys (`Ctrl+C`, `Enter`, `Tab`, `clear`) and input transmission.
-- 🧪 **Built-in Offline Demo Mode**: High-fidelity simulator (`MockAntigravityService`) enabling comprehensive hands-on evaluation without an active desktop connection.
+---
 
-#### 3. Deck Previews & UI Screenshots
+<a name="-ui-screenshots"></a>
+### 📱 UI Screenshots & Deck Previews
 
 > 📸 **Live Emulator Verification**: All deck screenshots below are captured directly from authentic Android Emulator sessions (Android 15 API 35) running the native Flutter app.
 
@@ -447,6 +443,19 @@ sequenceDiagram
     </tr>
   </table>
 </div>
+
+---
+
+### ✨ Key Features (Feature Matrix)
+
+| Feature Module | Technical Specification |
+| :--- | :--- |
+| 📸 **Instant QR Pairing** | Powered by `mobile_scanner`, parses Google AccountChooser URLs, deep links (`antigravity://`), configuration JSON, and raw instance UUIDs. |
+| 🧠 **Cascade Thought Streaming** | Neural pulse animation displaying agent reasoning in real-time (`ThinkingCard`) with precise duration metrics. |
+| 🛠️ **Trajectory Steps & Diff** | Live tool execution cards (`run_command`, `replace_file_content`, etc.) and syntax-highlighted code diffs (`CodeDiffViewer`). |
+| 🛡️ **Interactive Security Approval** | Auto-prompts modal when `WAITING_USER_INTERACTION` is received, with safety flags for destructive commands and one-click Approve / Reject. |
+| 💻 **Live Remote Terminal** | Continuous terminal output streaming (`StreamTerminalOutput`) with specialized virtual keys (`Ctrl+C`, `Enter`, `Tab`, `clear`) and input dispatch. |
+| 🧪 **Full Offline Demo Mode** | High-fidelity simulator (`MockAntigravityService`) enabling comprehensive hands-on evaluation without host Mac connectivity. |
 
 ---
 

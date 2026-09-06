@@ -53,7 +53,9 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
     final deviceState = ref.watch(deviceProvider);
 
     ref.listen<CascadeState>(cascadeProvider, (prev, next) {
-      if (prev?.messages.length != next.messages.length) {
+      if (prev?.messages.length != next.messages.length ||
+          prev?.pendingInteraction != next.pendingInteraction ||
+          prev?.isStreaming != next.isStreaming) {
         _scrollToBottom();
       }
     });
@@ -219,6 +221,7 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
               thinking: message.thinking ?? '',
               isThinking: message.isThinking,
               duration: message.thinkingDuration,
+              initiallyExpanded: true,
             ),
 
           // Trajectory Steps
