@@ -43,10 +43,20 @@ class RemoteControlService {
 
   bool get isDemoMode => _isDemoMode;
 
+  /// 完全重置當前裝置的連線工作階段，取消在途串流並清空暫態快取 (P0 #1)
+  void resetDeviceSession() {
+    _liveCascadeSub?.cancel();
+    _liveCascadeSub = null;
+    _liveTerminalSub?.cancel();
+    _liveTerminalSub = null;
+    _currentLiveAiMessage = null;
+  }
+
   void updateConfiguration({
     required bool isDemoMode,
     DualTransportManager? transportManager,
   }) {
+    resetDeviceSession();
     _isDemoMode = isDemoMode;
     _transportManager = transportManager;
     _initListeners();
@@ -294,7 +304,9 @@ class RemoteControlService {
       return;
     }
 
-    if (_transportManager == null) return;
+    if (_transportManager == null) {
+      throw StateError('尚未建立傳輸連線');
+    }
 
     final reqPayload = jsonEncode({'input': input});
     await _transportManager!.callUnary(

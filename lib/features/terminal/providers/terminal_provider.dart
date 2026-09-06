@@ -46,6 +46,13 @@ class TerminalNotifier extends Notifier<TerminalState> {
       );
     });
 
+    // 切換或刪除裝置時，原子性清理終端緩衝，避免舊機器輸出混淆 (P0 #1)
+    ref.listen(deviceProvider.select((s) => s.activeDevice?.instanceId), (prevId, nextId) {
+      if (prevId != nextId) {
+        clear();
+      }
+    });
+
     return TerminalState(
       chunks: [
         TerminalChunk(

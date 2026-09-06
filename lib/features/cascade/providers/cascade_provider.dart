@@ -59,6 +59,13 @@ class CascadeNotifier extends Notifier<CascadeState> {
       state = state.copyWith(pendingInteraction: req);
     });
 
+    // 切換或刪除裝置時，原子性清理畫面上的舊對話與待審批狀態，避免操作送到舊機器 (P0 #1)
+    ref.listen(deviceProvider.select((s) => s.activeDevice?.instanceId), (prevId, nextId) {
+      if (prevId != nextId) {
+        clearConversation();
+      }
+    });
+
     final welcomeMsg = CascadeMessage(
       id: 'msg-welcome',
       cascadeId: 'cascade-main',
@@ -125,40 +132,52 @@ class CascadeNotifier extends Notifier<CascadeState> {
     }
   }
 
-  /// 處理使用者授權審批 (核准 / 拒絕)
-  void handleApproval({
+  /// 處理使用者授權審批 (核准 / 拒絕) (P0 #4: 必須等待遠端 RPC 返回成功確認)
+  Future<void> handleApproval({
     required String interactionId,
     required bool approved,
     String? feedback,
-  }) {
+  }) async {
     final remoteService = ref.read(remoteControlServiceProvider);
-    remoteService.handleApproval(
-      interactionId: interactionId,
-      approved: approved,
-      feedback: feedback,
-    );
 
-    final updatedMessages = state.messages.map((m) {
-      final updatedSteps = m.trajectorySteps.map((s) {
-        if (s.interaction?.interactionId == interactionId) {
-          final updatedReq = s.interaction!.copyWith(
-            status: approved ? InteractionStatus.approved : InteractionStatus.rejected,
-            userFeedback: feedback,
-          );
-          return s.copyWith(
-            status: approved ? StepStatus.completed : StepStatus.rejected,
-            interaction: updatedReq,
-          );
-        }
-        return s;
+    try {
+      // 1. 等待遠端確認 RPC 成功 (200 OK)
+      await remoteService.handleApproval(
+        interactionId: interactionId,
+        approved: approved,
+        feedback: feedback,
+      );
+
+      // 2. 遠端成功確認後，方將該步驟標註為完成/拒絕並清空待審批狀態
+      final updatedMessages = state.messages.map((m) {
+        final updatedSteps = m.trajectorySteps.map((s) {
+          if (s.interaction?.interactionId == interactionId) {
+            final updatedReq = s.interaction!.copyWith(
+              status: approved ? InteractionStatus.approved : InteractionStatus.rejected,
+              userFeedback: feedback,
+            );
+            return s.copyWith(
+              status: approved ? StepStatus.completed : StepStatus.rejected,
+              interaction: updatedReq,
+            );
+          }
+          return s;
+        }).toList();
+        return m.copyWith(trajectorySteps: updatedSteps);
       }).toList();
-      return m.copyWith(trajectorySteps: updatedSteps);
-    }).toList();
 
-    state = state.copyWith(
-      messages: updatedMessages,
-      clearPendingInteraction: true,
-    );
+      state = state.copyWith(
+        messages: updatedMessages,
+        clearPendingInteraction: true,
+        clearError: true,
+      );
+    } catch (e) {
+      // 3. 遠端返回錯誤或逾時：嚴禁清空待審批狀態，嚴禁標註步驟完成！
+      state = state.copyWith(
+        errorMessage: '審批提交失敗，遠端未確認執行: $e',
+      );
+      rethrow;
+    }
   }
 
   void clearConversation() {

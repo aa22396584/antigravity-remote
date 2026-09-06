@@ -170,7 +170,24 @@ class DeviceNotifier extends Notifier<DeviceState> {
     }
   }
 
+  int _connectionEpoch = 0;
+
   Future<void> connectToDevice(InstanceInfo device) async {
+    final epoch = ++_connectionEpoch;
+
+    // 立即取消既有訂閱與釋放舊連線，杜絕舊連線殘留與控制目標不一致 (P0 #1)
+    _transportSub?.cancel();
+    _transportSub = null;
+    _latencySub?.cancel();
+    _latencySub = null;
+    await _transportManager?.dispose();
+    _transportManager = null;
+
+    _remoteControlService?.updateConfiguration(
+      isDemoMode: state.isDemoMode,
+      transportManager: null,
+    );
+
     state = state.copyWith(
       isConnecting: true,
       clearError: true,
@@ -178,14 +195,14 @@ class DeviceNotifier extends Notifier<DeviceState> {
     );
 
     if (state.isDemoMode) {
-      _transportSub?.cancel();
-      _transportSub = null;
-      _latencySub?.cancel();
-      _latencySub = null;
-      await _transportManager?.dispose();
-      _transportManager = null;
-
       await Future.delayed(const Duration(milliseconds: 600));
+      if (_connectionEpoch != epoch) return;
+
+      _remoteControlService?.updateConfiguration(
+        isDemoMode: true,
+        transportManager: null,
+      );
+
       state = state.copyWith(
         isConnecting: false,
         activeTransport: device.transport,
@@ -208,53 +225,63 @@ class DeviceNotifier extends Notifier<DeviceState> {
         targetInstanceUuid: device.uuid.isNotEmpty ? device.uuid : device.instanceId,
       );
 
-      // 主動釋放既有的 _transportManager 與訂閱，杜絕記憶體與連線洩漏
-      _transportSub?.cancel();
-      _transportSub = null;
-      _latencySub?.cancel();
-      _latencySub = null;
-      await _transportManager?.dispose();
-      _transportManager = null;
-
-      _transportManager = DualTransportManager(
+      final newManager = DualTransportManager(
         relayClient: relayClient,
         meshClient: meshClient,
       );
 
-      _transportSub = _transportManager!.transportStream.listen((transport) {
-        state = state.copyWith(activeTransport: transport);
+      if (_connectionEpoch != epoch) {
+        await newManager.dispose();
+        return;
+      }
+
+      _transportManager = newManager;
+
+      _transportSub = newManager.transportStream.listen((transport) {
+        if (_connectionEpoch == epoch) {
+          state = state.copyWith(activeTransport: transport);
+        }
       });
 
-      _latencySub = _transportManager!.latencyStream.listen((lat) {
-        state = state.copyWith(currentLatencyMs: lat);
+      _latencySub = newManager.latencyStream.listen((lat) {
+        if (_connectionEpoch == epoch) {
+          state = state.copyWith(currentLatencyMs: lat);
+        }
       });
 
-      await _transportManager!.connectAll();
+      await newManager.connectAll();
+
+      if (_connectionEpoch != epoch) {
+        await newManager.dispose();
+        return;
+      }
 
       _remoteControlService?.updateConfiguration(
         isDemoMode: state.isDemoMode,
-        transportManager: _transportManager,
+        transportManager: newManager,
       );
 
       state = state.copyWith(
         isConnecting: false,
-        activeTransport: _transportManager!.currentTransport,
-        currentLatencyMs: _transportManager!.currentLatencyMs,
+        activeTransport: newManager.currentTransport,
+        currentLatencyMs: newManager.currentLatencyMs,
       );
     } catch (e) {
-      state = state.copyWith(
-        isConnecting: false,
-        connectionError: e.toString(),
-      );
+      if (_connectionEpoch == epoch) {
+        state = state.copyWith(
+          isConnecting: false,
+          connectionError: e.toString(),
+        );
+      }
     }
   }
 
-  void selectDevice(InstanceInfo device) {
-    state = state.copyWith(activeDevice: device);
-    connectToDevice(device);
+  Future<void> selectDevice(InstanceInfo device) async {
+    await connectToDevice(device);
   }
 
   Future<void> removeDevice(String instanceId) async {
+    ++_connectionEpoch;
     final updated = state.devices.where((d) => d.instanceId != instanceId).toList();
     final wasActive = state.activeDevice?.instanceId == instanceId;
     InstanceInfo? nextActive;
@@ -271,12 +298,17 @@ class DeviceNotifier extends Notifier<DeviceState> {
       _latencySub = null;
       await _transportManager?.dispose();
       _transportManager = null;
+      _remoteControlService?.updateConfiguration(
+        isDemoMode: state.isDemoMode,
+        transportManager: null,
+      );
     }
 
     state = state.copyWith(
       devices: updated,
       activeDevice: nextActive,
       clearActiveDevice: nextActive == null,
+      activeTransport: nextActive == null ? TransportType.offline : null,
     );
     await _storageService?.removeInstance(instanceId);
 

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:http/http.dart' as http;
 import '../models/instance_info.dart';
@@ -316,30 +317,44 @@ class WebRtcMeshClient implements TransportClient {
     final payload = frame.payload;
     final flag = frame.flag;
 
-    // 1. 檢查是否為 Channel Binding Challenge 握手挑戰
+    // 1. Channel Binding 握手挑戰與確認處理 (P0 #10: 嚴格認證閘門)
     if (!_isChannelAuthenticated) {
       try {
-        final challengeJson = jsonDecode(utf8.decode(payload));
-        if (challengeJson is Map && challengeJson['challenge_nonce'] != null) {
-          await _respondToChannelBindingChallenge(
-            challengeJson['challenge_nonce'] as String,
-          );
-          _isChannelAuthenticated = true;
-          _lastLatencyMs = 12; // Initial P2P estimate
-          if (!_connectionStatusController.isClosed) {
-            _connectionStatusController.add(true);
+        final text = utf8.decode(payload);
+        final challengeJson = jsonDecode(text);
+        if (challengeJson is Map) {
+          // 收到桌面端 Nonce 挑戰 -> 進行私鑰簽名並回傳 Response (此時仍為未認證狀態)
+          if (challengeJson['challenge_nonce'] != null) {
+            await _respondToChannelBindingChallenge(
+              challengeJson['challenge_nonce'] as String,
+            );
+            return;
           }
-          if (!_latencyController.isClosed) {
-            _latencyController.add(_lastLatencyMs!);
+          // 收到桌面端 Channel Binding ACK 確認 -> 方可正式標記為已認證並放行通道
+          if (challengeJson['type'] == 'channel_binding_ack' ||
+              challengeJson['type'] == 'channel_binding_success' ||
+              challengeJson['channel_binding_ack'] == true ||
+              challengeJson['authenticated'] == true) {
+            _isChannelAuthenticated = true;
+            _lastLatencyMs = 12; // Initial P2P estimate
+            if (!_connectionStatusController.isClosed) {
+              _connectionStatusController.add(true);
+            }
+            if (!_latencyController.isClosed) {
+              _latencyController.add(_lastLatencyMs!);
+            }
+            return;
           }
-          return;
         }
       } catch (_) {
-        // Non-JSON, proceed to standard dispatch
+        // 非 JSON 或解析失敗
       }
+
+      // 嚴格安全界線：在收到 Channel Binding ACK 之前，所有非握手封包一律阻絕丟棄！
+      return;
     }
 
-    // 2. 多工隔離分流 (Multiplexing Isolation)
+    // 2. 多工隔離分流 (P0 #2: 徹底隔離 Cascade 與 Terminal 串流)
     // 優先根據獨立 DataChannel 頻道標籤或 5-byte Flag (0x01: Cascade, 0x02: Terminal)
     if (fromChannel == 'terminal-channel' || flag == 0x02) {
       if (!_terminalStreamController.isClosed) {
@@ -355,54 +370,45 @@ class WebRtcMeshClient implements TransportClient {
       return;
     }
 
-    // 3. 針對共享單一 DataChannel 且 Flag 為 0x00 的相容回退分流
-    // 檢查是否為 Cascade Reactive Update 串流封包 (包含思考、步驟、互動審批與文字串流)
-    bool isCascadePayload = false;
-    try {
-      final text = utf8.decode(payload);
-      final json = jsonDecode(text);
-      if (json is Map) {
-        if (json.containsKey('thinking') ||
-            json.containsKey('is_thinking') ||
-            json.containsKey('trajectory_step') ||
-            json.containsKey('step') ||
-            json.containsKey('interaction') ||
-            json.containsKey('cascadeId') ||
-            json.containsKey('cascade_id') ||
-            json.containsKey('is_final') ||
-            json.containsKey('done') ||
-            json.containsKey('content') ||
-            json.containsKey('text') ||
-            json.containsKey('step_id')) {
-          isCascadePayload = true;
-        }
-      }
-    } catch (_) {}
-
-    if (isCascadePayload) {
-      if (!_cascadeStreamController.isClosed) {
-        _cascadeStreamController.add(payload);
-      }
-      return;
-    }
-
-    // 4. 一元 RPC 請求回傳匹配 (僅限非串流、且來自 proxy/default 頻道)
+    // 3. 一元 RPC 請求回傳匹配 (P0 #2: 禁止純 FIFO 盲配，依 RequestID 精確匹對)
     if (flag == 0x00 &&
         fromChannel != 'cascade-channel' &&
-        fromChannel != 'terminal-channel' &&
-        _pendingRequests.isNotEmpty) {
-      final firstKey = _pendingRequests.keys.first;
-      final completer = _pendingRequests.remove(firstKey);
-      completer?.complete(payload);
-      return;
-    }
+        fromChannel != 'terminal-channel') {
+      int? resRequestId;
+      Uint8List? resPayload;
 
-    // 5. 終端或預設串流回退分發 (純文字/PTY 輸出)
-    if (_terminalStreamController.hasListener && !_terminalStreamController.isClosed) {
-      _terminalStreamController.add(payload);
-    }
-    if (!_defaultStreamController.isClosed) {
-      _defaultStreamController.add(payload);
+      try {
+        final text = utf8.decode(payload);
+        final json = jsonDecode(text);
+        if (json is Map) {
+          final rawId = json['request_id'] ?? json['requestId'];
+          if (rawId != null) {
+            resRequestId = rawId is int ? rawId : int.tryParse(rawId.toString());
+          }
+          if (json.containsKey('payload')) {
+            final raw = json['payload'];
+            if (raw is String) {
+              try {
+                resPayload = base64Decode(raw);
+              } catch (_) {
+                resPayload = Uint8List.fromList(utf8.encode(raw));
+              }
+            }
+          } else if (json.containsKey('payload_text')) {
+            resPayload = Uint8List.fromList(utf8.encode(json['payload_text'].toString()));
+          }
+        }
+      } catch (_) {}
+
+      // 根據明確 RequestID 配對 Completer
+      if (resRequestId != null && _pendingRequests.containsKey(resRequestId)) {
+        final completer = _pendingRequests.remove(resRequestId);
+        completer?.complete(resPayload ?? payload);
+        return;
+      }
+
+      // 禁止純 FIFO 盲配：若缺乏 RequestID 或無法匹配既有請求，絕不隨意挪用其他請求之 Completer
+      return;
     }
   }
 
@@ -525,14 +531,21 @@ class WebRtcMeshClient implements TransportClient {
     final completer = Completer<Uint8List>();
     _pendingRequests[reqId] = completer;
 
-    final frame = frameMessage(payload, flag: 0x00);
+    // 將 RequestID、RPC Path 與 Payload 封裝入通訊信封 (P0 #2: 明確 RequestID 與 RPC 標記)
+    final envelope = jsonEncode({
+      'request_id': reqId,
+      'rpc_path': rpcPath,
+      'payload': base64Encode(payload),
+    });
+
+    final frame = frameMessage(Uint8List.fromList(utf8.encode(envelope)), flag: 0x00);
     _dataChannel!.send(RTCDataChannelMessage.fromBinary(frame));
 
     return completer.future.timeout(
       const Duration(seconds: 15),
       onTimeout: () {
         _pendingRequests.remove(reqId);
-        throw TimeoutException('P2P DataChannel RPC timeout: $rpcPath');
+        throw TimeoutException('P2P DataChannel RPC timeout: $rpcPath (reqId: $reqId)');
       },
     );
   }
@@ -578,6 +591,15 @@ class WebRtcMeshClient implements TransportClient {
     }
     _signalingTimer?.cancel();
     _signalingTimer = null;
+
+    // 清理並拒絕所有尚在等待中的 RPC Completer
+    for (final completer in _pendingRequests.values) {
+      if (!completer.isCompleted) {
+        completer.completeError(Exception('WebRTC DataChannel disconnected'));
+      }
+    }
+    _pendingRequests.clear();
+
     await _dataChannel?.close();
     await _cascadeDataChannel?.close();
     await _terminalDataChannel?.close();
@@ -600,4 +622,23 @@ class WebRtcMeshClient implements TransportClient {
     if (!_defaultStreamController.isClosed) _defaultStreamController.close();
     _httpClient.close();
   }
+
+  @visibleForTesting
+  Future<void> routeFrameForTesting(FramePacket frame, {String? fromChannel}) =>
+      _routeFrame(frame, fromChannel: fromChannel);
+
+  @visibleForTesting
+  bool get isChannelAuthenticatedForTesting => _isChannelAuthenticated;
+
+  @visibleForTesting
+  void setChannelAuthenticatedForTesting(bool val) => _isChannelAuthenticated = val;
+
+  @visibleForTesting
+  Map<int, Completer<Uint8List>> get pendingRequestsForTesting => _pendingRequests;
+
+  @visibleForTesting
+  Stream<Uint8List> get cascadeStreamForTesting => _cascadeStreamController.stream;
+
+  @visibleForTesting
+  Stream<Uint8List> get terminalStreamForTesting => _terminalStreamController.stream;
 }

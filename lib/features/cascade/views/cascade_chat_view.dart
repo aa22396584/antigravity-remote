@@ -61,6 +61,7 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
     final cascadeState = ref.watch(cascadeProvider);
     final cascadeNotifier = ref.read(cascadeProvider.notifier);
     final deviceState = ref.watch(deviceProvider);
+    final messenger = ScaffoldMessenger.of(context);
 
     ref.listen<CascadeState>(cascadeProvider, (prev, next) {
       final prevLast = prev?.messages.isNotEmpty == true ? prev!.messages.last : null;
@@ -162,12 +163,23 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
                       UserApprovalDialog.show(
                         context,
                         request: cascadeState.pendingInteraction!,
-                        onRespond: (approved, feedback) {
-                          cascadeNotifier.handleApproval(
-                            interactionId: cascadeState.pendingInteraction!.interactionId,
-                            approved: approved,
-                            feedback: feedback,
-                          );
+                        onRespond: (approved, feedback) async {
+                          try {
+                            await cascadeNotifier.handleApproval(
+                              interactionId: cascadeState.pendingInteraction!.interactionId,
+                              approved: approved,
+                              feedback: feedback,
+                            );
+                          } catch (e) {
+                            if (mounted) {
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text('審批提交失敗: $e'),
+                                  backgroundColor: CyberColors.red,
+                                ),
+                              );
+                            }
+                          }
                         },
                       );
                     },
@@ -201,6 +213,7 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
   }
 
   Widget _buildMessageItem(CascadeMessage message, CascadeNotifier notifier) {
+    final messenger = ScaffoldMessenger.of(context);
     if (message.role == MessageRole.user) {
       return Align(
         alignment: Alignment.centerRight,
@@ -248,12 +261,23 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
           for (final step in message.trajectorySteps)
             TrajectoryStepCard(
               step: step,
-              onApproval: (id, approved, feedback) {
-                notifier.handleApproval(
-                  interactionId: id,
-                  approved: approved,
-                  feedback: feedback,
-                );
+              onApproval: (id, approved, feedback) async {
+                try {
+                  await notifier.handleApproval(
+                    interactionId: id,
+                    approved: approved,
+                    feedback: feedback,
+                  );
+                } catch (e) {
+                  if (mounted) {
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text('審批提交失敗: $e'),
+                        backgroundColor: CyberColors.red,
+                      ),
+                    );
+                  }
+                }
               },
             ),
 

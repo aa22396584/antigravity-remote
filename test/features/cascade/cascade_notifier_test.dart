@@ -27,7 +27,7 @@ void main() {
       expect(state.messages.any((m) => m.role == MessageRole.user && m.content == '請幫我執行測試'), isTrue);
     });
 
-    test('handleApproval updates step status to completed or rejected', () {
+    test('handleApproval updates step status to completed or rejected', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -69,7 +69,7 @@ void main() {
       );
 
       // Approve interaction
-      notifier.handleApproval(
+      await notifier.handleApproval(
         interactionId: 'test-req-1',
         approved: true,
         feedback: 'OK',

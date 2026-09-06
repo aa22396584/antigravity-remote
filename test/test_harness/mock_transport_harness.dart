@@ -59,7 +59,7 @@ class MockTransportHarness extends DualTransportManager {
   }
 
   @override
-  Future<Uint8List> callUnary(String rpcPath, Uint8List payload) async {
+  Future<Uint8List> callUnary(String rpcPath, Uint8List payload, {bool? isIdempotent}) async {
     unaryCalls.add(RecordedUnaryCall(rpcPath: rpcPath, payload: payload));
     if (unaryError != null) throw unaryError!;
     return unaryResponsePayload ?? Uint8List.fromList(utf8.encode('{"status":"OK"}'));

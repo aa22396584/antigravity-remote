@@ -2,7 +2,23 @@ import 'dart:async';
 import 'dart:typed_data';
 import '../models/instance_info.dart';
 import 'cloud_relay_client.dart';
+import 'endpoints.dart';
 import 'webrtc_mesh_client.dart';
+
+/// 當非冪等操作在傳輸層已送出 (In-flight) 但確認失敗時拋出，防止自動重送造成重複寫入 (P0 #3)
+class DuplicateExecutionPreventedException implements Exception {
+  final String rpcPath;
+  final Object cause;
+
+  const DuplicateExecutionPreventedException({
+    required this.rpcPath,
+    required this.cause,
+  });
+
+  @override
+  String toString() =>
+      '非冪等請求已發送至 P2P 但確認失敗或逾時 ($rpcPath)。已阻止自動切換中繼重送以防止重複執行，請手動重試: $cause';
+}
 
 class DualTransportManager {
   final CloudRelayClient relayClient;
@@ -104,8 +120,42 @@ class DualTransportManager {
     }
   }
 
-  /// 智慧自適應呼叫（優先 P2P，Fallback Cloud Relay）
-  Future<Uint8List> callUnary(String rpcPath, Uint8List payload) async {
+  /// 判定特定 RPC 是否具備冪等性 (Idempotent)
+  static bool isRpcPathIdempotent(String rpcPath) {
+    if (rpcPath == ApiEndpoints.sendUserCascadeMessage ||
+        rpcPath == ApiEndpoints.sendTerminalInput ||
+        rpcPath == ApiEndpoints.handleCascadeUserInteraction ||
+        rpcPath == ApiEndpoints.writeFile) {
+      return false;
+    }
+    if (rpcPath == ApiEndpoints.listInstances ||
+        rpcPath == ApiEndpoints.listConversations ||
+        rpcPath == ApiEndpoints.readFile) {
+      return true;
+    }
+    // 預設檢驗動詞關鍵字
+    final lower = rpcPath.toLowerCase();
+    if (lower.contains('send') ||
+        lower.contains('handle') ||
+        lower.contains('execute') ||
+        lower.contains('write') ||
+        lower.contains('delete') ||
+        lower.contains('remove') ||
+        lower.contains('create') ||
+        lower.contains('update')) {
+      return false;
+    }
+    return true;
+  }
+
+  /// 智慧自適應呼叫（優先 P2P，Fallback Cloud Relay；非冪等請求在 in-flight 失敗時禁止自動重送）
+  Future<Uint8List> callUnary(
+    String rpcPath,
+    Uint8List payload, {
+    bool? isIdempotent,
+  }) async {
+    final idempotent = isIdempotent ?? isRpcPathIdempotent(rpcPath);
+
     if (meshClient != null && meshClient!.isConnected) {
       try {
         final result = await meshClient!.callUnary(rpcPath, payload);
@@ -113,9 +163,16 @@ class DualTransportManager {
           _setTransport(TransportType.p2p);
         }
         return result;
-      } catch (_) {
-        // P2P 失敗時自動 Fallback
+      } catch (e) {
+        // P2P 呼叫已在途中 (in-flight)。若為非冪等性請求，嚴禁自動透過 Relay 重送！(P0 #3)
         _setTransport(TransportType.relay);
+        if (!idempotent) {
+          throw DuplicateExecutionPreventedException(
+            rpcPath: rpcPath,
+            cause: e,
+          );
+        }
+        // 冪等性請求方可安全回退 Relay 重試
         return relayClient.callUnary(rpcPath, payload);
       }
     }
