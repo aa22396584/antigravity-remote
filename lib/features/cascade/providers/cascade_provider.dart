@@ -1,0 +1,182 @@
+import 'dart:async';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/models/cascade_message.dart';
+import '../../../core/models/trajectory_step.dart';
+import '../../../core/models/user_interaction.dart';
+import '../../../core/services/mock_antigravity_service.dart';
+import '../../device/providers/device_provider.dart';
+
+class CascadeState {
+  final String activeCascadeId;
+  final List<CascadeMessage> messages;
+  final bool isStreaming;
+  final UserInteractionRequest? pendingInteraction;
+  final String? errorMessage;
+
+  const CascadeState({
+    this.activeCascadeId = 'cascade-main',
+    this.messages = const [],
+    this.isStreaming = false,
+    this.pendingInteraction,
+    this.errorMessage,
+  });
+
+  CascadeState copyWith({
+    String? activeCascadeId,
+    List<CascadeMessage>? messages,
+    bool? isStreaming,
+    UserInteractionRequest? pendingInteraction,
+    bool clearPendingInteraction = false,
+    String? errorMessage,
+    bool clearError = false,
+  }) {
+    return CascadeState(
+      activeCascadeId: activeCascadeId ?? this.activeCascadeId,
+      messages: messages ?? this.messages,
+      isStreaming: isStreaming ?? this.isStreaming,
+      pendingInteraction: clearPendingInteraction
+          ? null
+          : (pendingInteraction ?? this.pendingInteraction),
+      errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+    );
+  }
+}
+
+class CascadeNotifier extends Notifier<CascadeState> {
+  StreamSubscription? _mockMsgSub;
+  StreamSubscription? _mockInteractSub;
+
+  @override
+  CascadeState build() {
+    ref.onDispose(() {
+      _mockMsgSub?.cancel();
+      _mockInteractSub?.cancel();
+    });
+
+    // 監聽 Mock 串流
+    _mockMsgSub = MockAntigravityService.instance.messageStream.listen((msg) {
+      _upsertMessage(msg);
+    });
+
+    _mockInteractSub = MockAntigravityService.instance.interactionStream.listen((req) {
+      state = state.copyWith(pendingInteraction: req);
+    });
+
+    final welcomeMsg = CascadeMessage(
+      id: 'msg-welcome',
+      cascadeId: 'cascade-main',
+      role: MessageRole.assistant,
+      content: '### 🚀 Antigravity 遠端控制中樞已就緒\n\n'
+          '已自動建立安全連線通道。您可以在此：\n'
+          '- 即時監控本機 Agent 執行進度與內部思考思維\n'
+          '- 審批與核准終端指令執行（`run_command`）與檔案編輯\n'
+          '- 直接在手機/平板發送 Prompt 引導桌面端編程',
+      thinking: '遠端雙軌連線已初始化，通道安全檢查完畢。',
+      isThinking: false,
+      timestamp: DateTime.now().subtract(const Duration(minutes: 1)),
+    );
+
+    return CascadeState(messages: [welcomeMsg]);
+  }
+
+  void _upsertMessage(CascadeMessage msg) {
+    final list = List<CascadeMessage>.from(state.messages);
+    final idx = list.indexWhere((m) => m.id == msg.id);
+    if (idx != -1) {
+      list[idx] = msg;
+    } else {
+      list.add(msg);
+    }
+    state = state.copyWith(
+      messages: list,
+      isStreaming: msg.isStreaming,
+    );
+  }
+
+  /// 發送使用者訊息 / Prompt
+  Future<void> sendPrompt(String prompt) async {
+    final trimmed = prompt.trim();
+    if (trimmed.isEmpty) return;
+
+    final deviceState = ref.read(deviceProvider);
+
+    if (deviceState.isDemoMode) {
+      MockAntigravityService.instance.simulateUserPrompt(
+        trimmed,
+        state.activeCascadeId,
+      );
+    } else {
+      final userMsg = CascadeMessage(
+        id: 'msg-user-${DateTime.now().millisecondsSinceEpoch}',
+        cascadeId: state.activeCascadeId,
+        role: MessageRole.user,
+        content: trimmed,
+        timestamp: DateTime.now(),
+      );
+      state = state.copyWith(
+        messages: [...state.messages, userMsg],
+        isStreaming: true,
+      );
+
+      try {
+        final manager = ref.read(deviceProvider.notifier).transportManager;
+        if (manager != null) {
+          // 調用 SendUserCascadeMessage
+        }
+      } catch (e) {
+        state = state.copyWith(
+          isStreaming: false,
+          errorMessage: '發送訊息失敗: $e',
+        );
+      }
+    }
+  }
+
+  /// 處理使用者授權審批 (核准 / 拒絕)
+  void handleApproval({
+    required String interactionId,
+    required bool approved,
+    String? feedback,
+  }) {
+    final deviceState = ref.read(deviceProvider);
+
+    if (deviceState.isDemoMode) {
+      MockAntigravityService.instance.handleUserApproval(
+        interactionId: interactionId,
+        approved: approved,
+        feedback: feedback,
+      );
+    }
+
+    final updatedMessages = state.messages.map((m) {
+      final updatedSteps = m.trajectorySteps.map((s) {
+        if (s.interaction?.interactionId == interactionId) {
+          final updatedReq = s.interaction!.copyWith(
+            status: approved ? InteractionStatus.approved : InteractionStatus.rejected,
+            userFeedback: feedback,
+          );
+          return s.copyWith(
+            status: approved ? StepStatus.completed : StepStatus.rejected,
+            interaction: updatedReq,
+          );
+        }
+        return s;
+      }).toList();
+      return m.copyWith(trajectorySteps: updatedSteps);
+    }).toList();
+
+    state = state.copyWith(
+      messages: updatedMessages,
+      clearPendingInteraction: true,
+    );
+  }
+
+  void clearConversation() {
+    state = state.copyWith(
+      messages: [],
+      clearPendingInteraction: true,
+    );
+  }
+}
+
+final cascadeProvider = NotifierProvider<CascadeNotifier, CascadeState>(CascadeNotifier.new);
