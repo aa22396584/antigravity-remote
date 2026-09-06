@@ -1,10 +1,72 @@
 import 'dart:convert';
+import 'dart:math';
+import 'dart:typed_data';
+import 'package:pointycastle/export.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/instance_info.dart';
 import '../network/endpoints.dart';
 
+/// 加密金鑰與 AES-256-GCM 處理模組
+class _TokenVaultCrypto {
+  static const int _ivLength = 12; // 96-bit nonce for GCM
+  static const int _macLengthBits = 128;
+
+  static Uint8List deriveKey(String salt) {
+    final digest = SHA256Digest();
+    final input = utf8.encode('antigravity_token_vault_v1:$salt');
+    return digest.process(Uint8List.fromList(input));
+  }
+
+  static String encrypt(String plaintext, Uint8List key) {
+    final random = Random.secure();
+    final iv = Uint8List(_ivLength);
+    for (int i = 0; i < _ivLength; i++) {
+      iv[i] = random.nextInt(256);
+    }
+
+    final cipher = GCMBlockCipher(AESEngine());
+    final params = AEADParameters(KeyParameter(key), _macLengthBits, iv, Uint8List(0));
+    cipher.init(true, params);
+
+    final input = Uint8List.fromList(utf8.encode(plaintext));
+    final output = cipher.process(input);
+
+    return 'enc:v1:${base64Url.encode(iv)}:${base64Url.encode(output)}';
+  }
+
+  static String? decrypt(String ciphertext, Uint8List key) {
+    if (!ciphertext.startsWith('enc:v1:')) {
+      // 相容既有舊版明文 Token
+      return ciphertext;
+    }
+
+    final parts = ciphertext.split(':');
+    if (parts.length != 4) return null;
+
+    try {
+      final iv = base64Url.decode(parts[2]);
+      final payload = base64Url.decode(parts[3]);
+
+      final decipher = GCMBlockCipher(AESEngine());
+      final params = AEADParameters(
+        KeyParameter(key),
+        _macLengthBits,
+        Uint8List.fromList(iv),
+        Uint8List(0),
+      );
+      decipher.init(false, params);
+
+      final decrypted = decipher.process(Uint8List.fromList(payload));
+      return utf8.decode(decrypted);
+    } catch (_) {
+      return null;
+    }
+  }
+}
+
 class StorageService {
   static const _keyAccessToken = 'ag_access_token';
+  static const _keyTokenSalt = 'ag_token_salt';
   static const _keyEnvironment = 'ag_environment';
   static const _keyInstances = 'ag_instances';
   static const _keyDemoMode = 'ag_demo_mode';
@@ -18,9 +80,34 @@ class StorageService {
     return StorageService(prefs);
   }
 
-  // Google OAuth / Bearer Token
-  String? getAccessToken() => _prefs.getString(_keyAccessToken);
-  Future<void> setAccessToken(String token) => _prefs.setString(_keyAccessToken, token);
+  String _getOrCreateSalt() {
+    var salt = _prefs.getString(_keyTokenSalt);
+    if (salt == null || salt.isEmpty) {
+      final rand = Random.secure();
+      final bytes = Uint8List(16);
+      for (int i = 0; i < 16; i++) {
+        bytes[i] = rand.nextInt(256);
+      }
+      salt = base64Url.encode(bytes);
+      _prefs.setString(_keyTokenSalt, salt);
+    }
+    return salt;
+  }
+
+  Uint8List get _vaultKey => _TokenVaultCrypto.deriveKey(_getOrCreateSalt());
+
+  // Google OAuth / Bearer Token (AES-256-GCM 加密保護，避免明文落盤)
+  String? getAccessToken() {
+    final raw = _prefs.getString(_keyAccessToken);
+    if (raw == null || raw.isEmpty) return null;
+    return _TokenVaultCrypto.decrypt(raw, _vaultKey);
+  }
+
+  Future<void> setAccessToken(String token) async {
+    final encrypted = _TokenVaultCrypto.encrypt(token, _vaultKey);
+    await _prefs.setString(_keyAccessToken, encrypted);
+  }
+
   Future<void> clearAccessToken() => _prefs.remove(_keyAccessToken);
 
   // Cloud Endpoint Environment

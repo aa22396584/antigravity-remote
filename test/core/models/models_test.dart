@@ -128,5 +128,76 @@ void main() {
       expect(restored.text, 'flutter test passed!\n');
       expect(restored.isError, isFalse);
     });
+
+    test('TrajectoryStep fromJson handles snake_case keys and flexible enums', () {
+      final json = {
+        'step_id': 'step-snake-01',
+        'type': 'tool_call',
+        'tool_name': 'run_command',
+        'summary': '執行編譯',
+        'description': '編譯目標平台二進位檔',
+        'args': {'cmd': 'flutter build'},
+        'code_diff': '@@ -1 +1 @@\n+patched',
+        'output': 'Build success',
+        'status': 'waiting_user_interaction',
+        'execution_duration_ms': 550,
+      };
+
+      final step = TrajectoryStep.fromJson(json);
+      expect(step.stepId, 'step-snake-01');
+      expect(step.type, StepType.toolCall);
+      expect(step.toolName, 'run_command');
+      expect(step.arguments['cmd'], 'flutter build');
+      expect(step.codeDiff, '@@ -1 +1 @@\n+patched');
+      expect(step.status, StepStatus.waitingUserInteraction);
+      expect(step.executionDuration?.inMilliseconds, 550);
+    });
+
+    test('UserInteractionRequest fromJson handles snake_case keys', () {
+      final json = {
+        'interaction_id': 'req-snake-02',
+        'interaction_type': 'ask_permission',
+        'request_title': '授權指令',
+        'description': '請求終端權限',
+        'action_target': 'rm -rf /tmp/cache',
+        'action_name': 'command',
+        'is_multi_select': true,
+        'is_destructive': true,
+        'interaction_status': 'pending',
+        'user_feedback': '無反饋',
+      };
+
+      final req = UserInteractionRequest.fromJson(json);
+      expect(req.interactionId, 'req-snake-02');
+      expect(req.type, UserInteractionType.askPermission);
+      expect(req.title, '授權指令');
+      expect(req.actionTarget, 'rm -rf /tmp/cache');
+      expect(req.isMultiSelect, isTrue);
+      expect(req.isDestructive, isTrue);
+      expect(req.status, InteractionStatus.pending);
+      expect(req.userFeedback, '無反饋');
+    });
+
+    test('CascadeMessage fromJson handles snake_case keys', () {
+      final json = {
+        'id': 'msg-snake-03',
+        'cascade_id': 'casc-snake-888',
+        'role': 'assistant',
+        'text': '已完成解析',
+        'thinking': '思考中...',
+        'is_thinking': true,
+        'thinking_duration_ms': 1200,
+        'is_streaming': true,
+      };
+
+      final msg = CascadeMessage.fromJson(json);
+      expect(msg.id, 'msg-snake-03');
+      expect(msg.cascadeId, 'casc-snake-888');
+      expect(msg.content, '已完成解析');
+      expect(msg.thinking, '思考中...');
+      expect(msg.isThinking, isTrue);
+      expect(msg.thinkingDuration?.inMilliseconds, 1200);
+      expect(msg.isStreaming, isTrue);
+    });
   });
 }

@@ -131,5 +131,7 @@ class DualTransportManager {
     if (!_latencyController.isClosed) {
       await _latencyController.close();
     }
+    relayClient.dispose();
+    meshClient?.dispose();
   }
 }

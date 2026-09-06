@@ -34,14 +34,19 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
     super.dispose();
   }
 
-  void _scrollToBottom() {
+  void _scrollToBottom({bool smooth = true}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+        final maxScroll = _scrollController.position.maxScrollExtent;
+        if (smooth) {
+          _scrollController.animateTo(
+            maxScroll,
+            duration: const Duration(milliseconds: 120),
+            curve: Curves.easeOut,
+          );
+        } else {
+          _scrollController.jumpTo(maxScroll);
+        }
       }
     });
   }
@@ -53,9 +58,16 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
     final deviceState = ref.watch(deviceProvider);
 
     ref.listen<CascadeState>(cascadeProvider, (prev, next) {
+      final prevLast = prev?.messages.isNotEmpty == true ? prev!.messages.last : null;
+      final nextLast = next.messages.isNotEmpty == true ? next.messages.last : null;
+      final contentChanged = prevLast?.content != nextLast?.content ||
+          prevLast?.thinking != nextLast?.thinking ||
+          prevLast?.trajectorySteps.length != nextLast?.trajectorySteps.length;
+
       if (prev?.messages.length != next.messages.length ||
           prev?.pendingInteraction != next.pendingInteraction ||
-          prev?.isStreaming != next.isStreaming) {
+          prev?.isStreaming != next.isStreaming ||
+          contentChanged) {
         _scrollToBottom();
       }
     });

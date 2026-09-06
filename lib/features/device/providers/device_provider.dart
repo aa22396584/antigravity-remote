@@ -114,6 +114,14 @@ class DeviceNotifier extends Notifier<DeviceState> {
   DualTransportManager? get transportManager => _transportManager;
 
   void toggleDemoMode(bool enabled) {
+    if (enabled && _transportManager != null) {
+      _transportSub?.cancel();
+      _transportSub = null;
+      _latencySub?.cancel();
+      _latencySub = null;
+      _transportManager?.dispose();
+      _transportManager = null;
+    }
     state = state.copyWith(isDemoMode: enabled);
     _storageService?.setDemoMode(enabled);
     _remoteControlService?.updateConfiguration(
@@ -141,7 +149,7 @@ class DeviceNotifier extends Notifier<DeviceState> {
     final devName = name ?? hostname ?? 'Antigravity ($shortId)';
     final newDevice = InstanceInfo(
       instanceId: instanceId,
-      uuid: 'uuid-$instanceId',
+      uuid: instanceId,
       name: devName,
       status: InstanceConnectionStatus.connected,
       transport: TransportType.p2p,
@@ -170,6 +178,13 @@ class DeviceNotifier extends Notifier<DeviceState> {
     );
 
     if (state.isDemoMode) {
+      _transportSub?.cancel();
+      _transportSub = null;
+      _latencySub?.cancel();
+      _latencySub = null;
+      await _transportManager?.dispose();
+      _transportManager = null;
+
       await Future.delayed(const Duration(milliseconds: 600));
       state = state.copyWith(
         isConnecting: false,
@@ -193,8 +208,13 @@ class DeviceNotifier extends Notifier<DeviceState> {
         targetInstanceUuid: device.uuid.isNotEmpty ? device.uuid : device.instanceId,
       );
 
+      // 主動釋放既有的 _transportManager 與訂閱，杜絕記憶體與連線洩漏
       _transportSub?.cancel();
+      _transportSub = null;
       _latencySub?.cancel();
+      _latencySub = null;
+      await _transportManager?.dispose();
+      _transportManager = null;
 
       _transportManager = DualTransportManager(
         relayClient: relayClient,

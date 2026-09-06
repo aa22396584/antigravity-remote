@@ -28,6 +28,7 @@ void main() {
       final state = container.read(deviceProvider);
       expect(state.devices.any((d) => d.instanceId == 'new-instance-8899'), isTrue);
       expect(state.activeDevice?.instanceId, 'new-instance-8899');
+      expect(state.activeDevice?.uuid, 'new-instance-8899');
       expect(state.activeDevice?.name, 'New Test Mac');
     });
 

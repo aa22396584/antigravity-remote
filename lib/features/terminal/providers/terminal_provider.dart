@@ -24,6 +24,7 @@ class TerminalState {
 }
 
 class TerminalNotifier extends Notifier<TerminalState> {
+  static const int maxBufferChunks = 1000;
   StreamSubscription? _termSub;
 
   @override
@@ -35,8 +36,12 @@ class TerminalNotifier extends Notifier<TerminalState> {
     });
 
     _termSub = remoteService.terminalStream.listen((chunk) {
+      final updated = [...state.chunks, chunk];
+      final trimmed = updated.length > maxBufferChunks
+          ? updated.sublist(updated.length - maxBufferChunks)
+          : updated;
       state = state.copyWith(
-        chunks: [...state.chunks, chunk],
+        chunks: trimmed,
         isStreaming: true,
       );
     });
@@ -60,7 +65,11 @@ class TerminalNotifier extends Notifier<TerminalState> {
       text: input.endsWith('\n') ? input : '$input\n',
       timestamp: DateTime.now(),
     );
-    state = state.copyWith(chunks: [...state.chunks, chunk]);
+    final updated = [...state.chunks, chunk];
+    final trimmed = updated.length > maxBufferChunks
+        ? updated.sublist(updated.length - maxBufferChunks)
+        : updated;
+    state = state.copyWith(chunks: trimmed);
 
     final remoteService = ref.read(remoteControlServiceProvider);
     await remoteService.sendTerminalInput(input);

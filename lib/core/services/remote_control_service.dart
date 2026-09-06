@@ -161,14 +161,14 @@ class RemoteControlService {
   void _handleLiveCascadeChunk(Uint8List rawBytes, String cascadeId) {
     if (rawBytes.isEmpty) return;
 
-    // 若有 5-byte 分幀前綴，剔除頭部
+    // 若有 5-byte 分幀前綴，剔除頭部（相容 0x00..0x0F 頻道多工旗標）
     Uint8List payload = rawBytes;
-    if (rawBytes.length > 5 && rawBytes[0] == 0x00) {
+    if (rawBytes.length >= 5 && rawBytes[0] <= 0x0F) {
       final len = (rawBytes[1] << 24) |
           (rawBytes[2] << 16) |
           (rawBytes[3] << 8) |
           rawBytes[4];
-      if (rawBytes.length >= 5 + len) {
+      if (len >= 0 && rawBytes.length >= 5 + len) {
         payload = rawBytes.sublist(5, 5 + len);
       }
     }
@@ -284,10 +284,13 @@ class RemoteControlService {
   /// 發送終端輸入
   Future<void> sendTerminalInput(String input) async {
     if (_isDemoMode) {
-      _terminalController.add(TerminalChunk(
-        text: input,
-        timestamp: DateTime.now(),
-      ));
+      // 解決 Demo 模式下的「雙重回顯（Double Echo）」Bug：
+      // TerminalNotifier 在 UI 端已進行本地輸入回顯 (Local Echo)，
+      // 在此僅模擬終端命令的回應輸出，絕不重複回顯使用者的原始輸入字串
+      final trimmed = input.trim();
+      if (trimmed.isNotEmpty && trimmed != '\x03' && trimmed != '\n' && trimmed != '\t') {
+        _simulateDemoTerminalResponse(trimmed);
+      }
       return;
     }
 
@@ -298,6 +301,34 @@ class RemoteControlService {
       ApiEndpoints.sendTerminalInput,
       Uint8List.fromList(utf8.encode(reqPayload)),
     );
+  }
+
+  void _simulateDemoTerminalResponse(String cmd) {
+    Timer(const Duration(milliseconds: 120), () {
+      if (!_terminalController.isClosed) {
+        String response;
+        if (cmd == 'pwd') {
+          response = '/Users/iml1s/Documents/mine/antigravity_remote\n';
+        } else if (cmd == 'whoami') {
+          response = 'iml1s (local engineer)\n';
+        } else if (cmd == 'git status') {
+          response = 'On branch main\nYour branch is up to date with \'origin/main\'.\nnothing to commit, working tree clean\n';
+        } else if (cmd.startsWith('flutter test')) {
+          response = '00:01 +3: All tests passed!\n';
+        } else if (cmd == 'ls' || cmd == 'ls -la') {
+          response = 'drwxr-xr-x  12 iml1s  staff   384 Mar  6 12:00 .\n'
+              '-rw-r--r--   1 iml1s  staff  4169 Mar  6 12:00 pubspec.yaml\n'
+              'drwxr-xr-x   8 iml1s  staff   256 Mar  6 12:00 lib\n'
+              'drwxr-xr-x   6 iml1s  staff   192 Mar  6 12:00 test\n';
+        } else {
+          response = '[demo-sh] executed: $cmd\n';
+        }
+        _terminalController.add(TerminalChunk(
+          text: response,
+          timestamp: DateTime.now(),
+        ));
+      }
+    });
   }
 
   /// 啟動真實終端輸出即時串流 (StreamTerminalOutput)

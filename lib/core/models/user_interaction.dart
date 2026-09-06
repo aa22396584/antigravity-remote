@@ -86,26 +86,49 @@ class UserInteractionRequest {
   };
 
   factory UserInteractionRequest.fromJson(Map<String, dynamic> json) {
+    final rawType = (json['type'] ?? json['interaction_type'])?.toString();
+    final rawStatus = (json['status'] ?? json['interaction_status'])?.toString();
+
     return UserInteractionRequest(
-      interactionId: json['interactionId'] as String? ?? '',
+      interactionId: (json['interactionId'] ??
+              json['interaction_id'] ??
+              json['id']) as String? ??
+          '',
       type: UserInteractionType.values.firstWhere(
-        (e) => e.name == json['type'],
+        (e) =>
+            e.name == rawType ||
+            e.name.toLowerCase() == rawType?.toLowerCase().replaceAll('_', ''),
         orElse: () => UserInteractionType.askPermission,
       ),
-      title: json['title'] as String? ?? '請求授權',
+      title: (json['title'] ?? json['request_title']) as String? ?? '請求授權',
       description: json['description'] as String? ?? '',
-      actionTarget: json['actionTarget'] as String? ?? '',
-      actionName: json['actionName'] as String? ?? 'command',
-      options: (json['options'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? const [],
-      isMultiSelect: json['isMultiSelect'] as bool? ?? false,
-      isDestructive: json['isDestructive'] as bool? ?? false,
+      actionTarget: (json['actionTarget'] ??
+              json['action_target'] ??
+              json['target']) as String? ??
+          '',
+      actionName: (json['actionName'] ??
+              json['action_name'] ??
+              json['action']) as String? ??
+          'command',
+      options: (json['options'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
+      isMultiSelect: (json['isMultiSelect'] ?? json['is_multi_select']) as bool? ?? false,
+      isDestructive: (json['isDestructive'] ?? json['is_destructive']) as bool? ?? false,
       status: InteractionStatus.values.firstWhere(
-        (e) => e.name == json['status'],
+        (e) =>
+            e.name == rawStatus ||
+            e.name.toLowerCase() == rawStatus?.toLowerCase().replaceAll('_', ''),
         orElse: () => InteractionStatus.pending,
       ),
-      userFeedback: json['userFeedback'] as String?,
-      requestedAt: json['requestedAt'] != null
-          ? DateTime.tryParse(json['requestedAt'] as String) ?? DateTime.now()
+      userFeedback: (json['userFeedback'] ??
+              json['user_feedback'] ??
+              json['feedback']) as String?,
+      requestedAt: (json['requestedAt'] ?? json['requested_at']) != null
+          ? DateTime.tryParse(
+                  (json['requestedAt'] ?? json['requested_at']) as String) ??
+              DateTime.now()
           : DateTime.now(),
     );
   }

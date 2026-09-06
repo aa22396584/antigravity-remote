@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/models/terminal_stream.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/ansi_parser.dart';
 import '../../../shared/widgets/cyber_card.dart';
 
 class TerminalConsoleCard extends StatefulWidget {
@@ -29,16 +30,20 @@ class _TerminalConsoleCardState extends State<TerminalConsoleCard> {
   void didUpdateWidget(TerminalConsoleCard oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.chunks.length != widget.chunks.length) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _scrollController.hasClients) {
-          _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 150),
-            curve: Curves.easeOut,
-          );
-        }
-      });
+      _scrollToBottom();
     }
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 150),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   @override
@@ -108,10 +113,10 @@ class _TerminalConsoleCardState extends State<TerminalConsoleCard> {
                 itemCount: widget.chunks.length,
                 itemBuilder: (context, index) {
                   final chunk = widget.chunks[index];
-                  return Text(
-                    chunk.text,
-                    style: AppTheme.codeFont(
-                      color: chunk.isError ? CyberColors.red : CyberColors.terminalText,
+                  return SelectableText.rich(
+                    AnsiParser.parseToSpan(
+                      chunk.text,
+                      defaultColor: chunk.isError ? CyberColors.red : CyberColors.terminalText,
                       fontSize: 12,
                     ),
                   );

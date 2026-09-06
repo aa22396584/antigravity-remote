@@ -71,26 +71,36 @@ class CascadeMessage {
   };
 
   factory CascadeMessage.fromJson(Map<String, dynamic> json) {
+    final rawRole = json['role']?.toString();
+    final durationMs = json['thinkingDurationMs'] ?? json['thinking_duration_ms'];
+
     return CascadeMessage(
       id: json['id'] as String? ?? '',
-      cascadeId: json['cascadeId'] as String? ?? '',
+      cascadeId: (json['cascadeId'] ?? json['cascade_id']) as String? ?? '',
       role: MessageRole.values.firstWhere(
-        (e) => e.name == json['role'],
+        (e) =>
+            e.name == rawRole ||
+            rawRole?.toUpperCase().contains(e.name.toUpperCase()) == true,
         orElse: () => MessageRole.assistant,
       ),
-      content: json['content'] as String? ?? '',
+      content: (json['content'] ?? json['text']) as String? ?? '',
       thinking: json['thinking'] as String?,
-      isThinking: json['isThinking'] as bool? ?? false,
-      thinkingDuration: json['thinkingDurationMs'] != null
-          ? Duration(milliseconds: json['thinkingDurationMs'] as int)
+      isThinking: (json['isThinking'] ?? json['is_thinking']) as bool? ?? false,
+      thinkingDuration: durationMs != null
+          ? Duration(milliseconds: (durationMs as num).toInt())
           : null,
-      trajectorySteps: (json['trajectorySteps'] as List<dynamic>?)
+      trajectorySteps: ((json['trajectorySteps'] ??
+                  json['trajectory_steps'] ??
+                  json['steps']) as List<dynamic>?)
               ?.map((e) => TrajectoryStep.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
-      isStreaming: json['isStreaming'] as bool? ?? false,
-      timestamp: json['timestamp'] != null
-          ? DateTime.tryParse(json['timestamp'] as String) ?? DateTime.now()
+      isStreaming:
+          (json['isStreaming'] ?? json['is_streaming']) as bool? ?? false,
+      timestamp: (json['timestamp'] ?? json['created_at']) != null
+          ? DateTime.tryParse(
+                  (json['timestamp'] ?? json['created_at']) as String) ??
+              DateTime.now()
           : DateTime.now(),
     );
   }

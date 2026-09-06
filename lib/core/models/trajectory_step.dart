@@ -91,30 +91,43 @@ class TrajectoryStep {
   };
 
   factory TrajectoryStep.fromJson(Map<String, dynamic> json) {
+    final rawType = (json['type'] ?? json['step_type'])?.toString();
+    final rawStatus = (json['status'] ?? json['step_status'])?.toString();
+    final durationMs = json['executionDurationMs'] ?? json['execution_duration_ms'];
+
     return TrajectoryStep(
-      stepId: json['stepId'] as String? ?? '',
+      stepId: (json['stepId'] ?? json['step_id']) as String? ?? '',
       type: StepType.values.firstWhere(
-        (e) => e.name == json['type'],
+        (e) =>
+            e.name == rawType ||
+            e.name.toLowerCase() == rawType?.toLowerCase().replaceAll('_', ''),
         orElse: () => StepType.toolCall,
       ),
-      toolName: json['toolName'] as String? ?? '',
+      toolName: (json['toolName'] ?? json['tool_name']) as String? ?? '',
       summary: json['summary'] as String? ?? '執行工具',
       description: json['description'] as String? ?? '',
-      arguments: (json['arguments'] as Map<String, dynamic>?) ?? const {},
+      arguments: (json['arguments'] ?? json['args'] as Map<String, dynamic>?) ??
+          const {},
       output: json['output'] as String?,
-      codeDiff: json['codeDiff'] as String?,
+      codeDiff: (json['codeDiff'] ?? json['code_diff']) as String?,
       status: StepStatus.values.firstWhere(
-        (e) => e.name == json['status'],
+        (e) =>
+            e.name == rawStatus ||
+            e.name.toLowerCase() == rawStatus?.toLowerCase().replaceAll('_', ''),
         orElse: () => StepStatus.completed,
       ),
-      interaction: json['interaction'] != null
-          ? UserInteractionRequest.fromJson(json['interaction'] as Map<String, dynamic>)
+      interaction: (json['interaction'] ?? json['user_interaction']) != null
+          ? UserInteractionRequest.fromJson(
+              (json['interaction'] ?? json['user_interaction'])
+                  as Map<String, dynamic>)
           : null,
-      timestamp: json['timestamp'] != null
-          ? DateTime.tryParse(json['timestamp'] as String) ?? DateTime.now()
+      timestamp: (json['timestamp'] ?? json['created_at']) != null
+          ? DateTime.tryParse(
+                  (json['timestamp'] ?? json['created_at']) as String) ??
+              DateTime.now()
           : DateTime.now(),
-      executionDuration: json['executionDurationMs'] != null
-          ? Duration(milliseconds: json['executionDurationMs'] as int)
+      executionDuration: durationMs != null
+          ? Duration(milliseconds: (durationMs as num).toInt())
           : null,
     );
   }
