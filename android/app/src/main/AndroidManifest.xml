@@ -36,19 +36,17 @@
                 <data android:scheme="antigravity-remote" />
             </intent-filter>
 
-            <!-- Web Deep Links: https://antigravity.google.com/r/... -->
-            <intent-filter android:autoVerify="true">
+            <!-- Web Deep Links: https://antigravity.google.com -->
+            <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="https"
-                    android:host="antigravity.google.com"
-                    android:pathPrefix="/r" />
+                    android:host="antigravity.google.com" />
                 <data
                     android:scheme="http"
-                    android:host="antigravity.google.com"
-                    android:pathPrefix="/r" />
+                    android:host="antigravity.google.com" />
             </intent-filter>
 
             <!-- Google AccountChooser redirect: https://accounts.google.com/AccountChooser -->

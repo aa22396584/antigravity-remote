@@ -18,6 +18,7 @@ class AntigravityRemoteApp extends ConsumerStatefulWidget {
 
 class _AntigravityRemoteAppState extends ConsumerState<AntigravityRemoteApp> {
   int _currentIndex = 0;
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
       GlobalKey<ScaffoldMessengerState>();
 
@@ -47,8 +48,9 @@ class _AntigravityRemoteAppState extends ConsumerState<AntigravityRemoteApp> {
       ref.read(cascadeProvider.notifier).switchCascade(target.cascadeId!);
     }
 
-    // 3. 自動導航至「工作區」
+    // 3. 自動導航至「工作區」，並安全退出可能覆蓋在頂層的子畫面（例如連線設定或掃碼畫面）
     if (mounted) {
+      _navigatorKey.currentState?.popUntil((route) => route.isFirst);
       setState(() {
         _currentIndex = 0;
       });
@@ -86,6 +88,7 @@ class _AntigravityRemoteAppState extends ConsumerState<AntigravityRemoteApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: _navigatorKey,
       scaffoldMessengerKey: _scaffoldMessengerKey,
       title: 'Antigravity Remote',
       debugShowCheckedModeBanner: false,

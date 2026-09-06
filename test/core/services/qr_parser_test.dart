@@ -98,5 +98,55 @@ void main() {
       expect(QrParserService.parse('   '), isNull);
       expect(QrParserService.parse('https://example.com/other/path'), isNull);
     });
+
+    test('parse double-encoded continue URL from Google AccountChooser', () {
+      final result = QrParserService.parse(
+        'https://accounts.google.com/AccountChooser?Email=tester@gmail.com&continue=https%253A%252F%252Fantigravity.google.com%252Fr%252Fdouble-encoded-123%253Fp%253Dc%252Fcasc-session-456',
+      );
+      expect(result, isNotNull);
+      expect(result!.instanceId, 'double-encoded-123');
+      expect(result.cascadeId, 'casc-session-456');
+      expect(result.email, 'tester@gmail.com');
+    });
+
+    test('parse continue URL containing custom antigravity:// scheme', () {
+      final result = QrParserService.parse(
+        'https://accounts.google.com/AccountChooser?Email=tester@gmail.com&continue=antigravity%3A%2F%2Fr%2Fcustom-continue-456',
+      );
+      expect(result, isNotNull);
+      expect(result!.instanceId, 'custom-continue-456');
+    });
+
+    test('parse URL wrapped in quotes, backticks or angle brackets', () {
+      final r1 = QrParserService.parse('"https://antigravity.google.com/r/quoted-id-789"');
+      expect(r1, isNotNull);
+      expect(r1!.instanceId, 'quoted-id-789');
+
+      final r2 = QrParserService.parse('<antigravity://r/bracket-id-789>');
+      expect(r2, isNotNull);
+      expect(r2!.instanceId, 'bracket-id-789');
+
+      final r3 = QrParserService.parse('`antigravity://r/backtick-id-789`');
+      expect(r3, isNotNull);
+      expect(r3!.instanceId, 'backtick-id-789');
+    });
+
+    test('parse single-slash custom scheme (antigravity:/r/...)', () {
+      final result = QrParserService.parse('antigravity:/r/single-slash-id');
+      expect(result, isNotNull);
+      expect(result!.instanceId, 'single-slash-id');
+    });
+
+    test('parse instance_id with underscores from connect query', () {
+      final result = QrParserService.parse('antigravity://connect?instance_id=underscore-id-999');
+      expect(result, isNotNull);
+      expect(result!.instanceId, 'underscore-id-999');
+    });
+
+    test('parse cascadeId with leading /c/ path in p parameter', () {
+      final result = QrParserService.parse('https://antigravity.google.com/r/test-id-111?p=/c/casc-123');
+      expect(result, isNotNull);
+      expect(result!.cascadeId, 'casc-123');
+    });
   });
 }

@@ -68,5 +68,21 @@ void main() {
       expect(targetFromCallback, isNotNull);
       expect(targetFromCallback!.instanceId, 'instant-cold-start-id');
     });
+
+    test('deduplicates identical URIs arriving in rapid succession', () async {
+      int emitCount = 0;
+      final sub = service.targetStream.listen((_) {
+        emitCount++;
+      });
+
+      const url = 'antigravity://r/dedup-test-device';
+      service.handleRawUri(url);
+      service.handleRawUri(url); // Rapid duplicate
+
+      await Future.delayed(Duration.zero);
+      expect(emitCount, 1);
+
+      await sub.cancel();
+    });
   });
 }

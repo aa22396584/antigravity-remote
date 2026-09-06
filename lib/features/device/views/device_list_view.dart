@@ -4,6 +4,7 @@ import '../../../core/services/qr_parser_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/cyber_button.dart';
 import '../../../shared/widgets/cyber_card.dart';
+import '../../cascade/providers/cascade_provider.dart';
 import '../providers/device_provider.dart';
 import '../widgets/device_card.dart';
 import '../widgets/transport_badge.dart';
@@ -139,19 +140,8 @@ class DeviceListView extends ConsumerWidget {
                   final result = await Navigator.of(context).push<ParsedRemoteTarget>(
                     MaterialPageRoute(builder: (_) => const QrScannerView()),
                   );
-                  if (result != null) {
-                    await deviceNotifier.addDevice(
-                      instanceId: result.instanceId,
-                      hostname: result.hostname,
-                    );
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('成功綁定設備: ${result.instanceId}'),
-                          backgroundColor: CyberColors.emerald,
-                        ),
-                      );
-                    }
+                  if (result != null && context.mounted) {
+                    await _handleScanResult(context, ref, result);
                   }
                 },
               ),
@@ -180,11 +170,8 @@ class DeviceListView extends ConsumerWidget {
                         final result = await Navigator.of(context).push<ParsedRemoteTarget>(
                           MaterialPageRoute(builder: (_) => const QrScannerView()),
                         );
-                        if (result != null) {
-                          await deviceNotifier.addDevice(
-                            instanceId: result.instanceId,
-                            hostname: result.hostname,
-                          );
+                        if (result != null && context.mounted) {
+                          await _handleScanResult(context, ref, result);
                         }
                       },
                     ),
@@ -229,5 +216,46 @@ class DeviceListView extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _handleScanResult(
+    BuildContext context,
+    WidgetRef ref,
+    ParsedRemoteTarget result,
+  ) async {
+    final deviceNotifier = ref.read(deviceProvider.notifier);
+    await deviceNotifier.addDevice(
+      instanceId: result.instanceId,
+      name: result.email != null ? 'Antigravity (${result.email})' : null,
+      hostname: result.hostname,
+    );
+    if (result.cascadeId != null) {
+      ref.read(cascadeProvider.notifier).switchCascade(result.cascadeId!);
+    }
+    if (context.mounted) {
+      final shortId = result.instanceId.length > 12
+          ? '${result.instanceId.substring(0, 12)}...'
+          : result.instanceId;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: CyberColors.emerald, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text('成功配對並切換設備: $shortId'),
+              ),
+            ],
+          ),
+          backgroundColor: CyberColors.surfaceElevated,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+            side: const BorderSide(color: CyberColors.emerald),
+          ),
+        ),
+      );
+      onOpenChat();
+    }
   }
 }
