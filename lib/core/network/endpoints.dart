@@ -25,6 +25,7 @@ class ApiEndpoints {
   static const String handleCascadeUserInteraction = '/exa.language_server_pb.LanguageServerService/HandleCascadeUserInteraction';
   static const String streamTerminalOutput = '/exa.language_server_pb.LanguageServerService/StreamTerminalOutput';
   static const String sendTerminalInput = '/exa.language_server_pb.LanguageServerService/SendTerminalInput';
+  static const String cancelCascadeTask = '/exa.language_server_pb.LanguageServerService/CancelCascadeTask';
   static const String readFile = '/exa.language_server_pb.LanguageServerService/ReadFile';
   static const String writeFile = '/exa.language_server_pb.LanguageServerService/WriteFile';
 

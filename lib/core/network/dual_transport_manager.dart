@@ -34,6 +34,13 @@ class DualTransportManager {
   StreamSubscription? _meshLatencySub;
   StreamSubscription? _meshConnSub;
 
+  // 斷線自動重連退避（Exponential Backoff）
+  bool _autoReconnect = true;
+  Timer? _reconnectTimer;
+  int _reconnectAttempts = 0;
+  static const int _baseBackoffMs = 1000;
+  static const int _maxBackoffMs = 30000;
+
   DualTransportManager({
     required this.relayClient,
     this.meshClient,
@@ -45,6 +52,7 @@ class DualTransportManager {
   int? get currentLatencyMs => _currentLatencyMs;
   Stream<TransportType> get transportStream => _transportController.stream;
   Stream<int> get latencyStream => _latencyController.stream;
+  int get reconnectAttempts => _reconnectAttempts;
 
   void _init() {
     _relayLatencySub = relayClient.latencyStream.listen((lat) {
@@ -59,6 +67,8 @@ class DualTransportManager {
     if (meshClient != null) {
       _meshConnSub = meshClient!.connectionStatusStream.listen((isConnected) {
         if (isConnected) {
+          _reconnectAttempts = 0;
+          _reconnectTimer?.cancel();
           _setTransport(TransportType.p2p);
           if (meshClient!.currentLatencyMs != null) {
             _currentLatencyMs = meshClient!.currentLatencyMs;
@@ -74,6 +84,8 @@ class DualTransportManager {
               _latencyController.add(_currentLatencyMs!);
             }
           }
+          // P2P 斷線時啟動指數退避重連機制
+          _scheduleMeshReconnect();
         }
       });
 
@@ -92,6 +104,9 @@ class DualTransportManager {
   }
 
   Future<void> connectAll() async {
+    _autoReconnect = true;
+    _reconnectAttempts = 0;
+
     // 1. 先連通 Cloud Relay 作為保底
     await relayClient.connect();
     _setTransport(TransportType.relay);
@@ -102,15 +117,39 @@ class DualTransportManager {
     }
   }
 
+  void _scheduleMeshReconnect() {
+    if (!_autoReconnect || meshClient == null || _reconnectTimer?.isActive == true) return;
+    final delayMs = (_baseBackoffMs * (1 << _reconnectAttempts.clamp(0, 5))).clamp(_baseBackoffMs, _maxBackoffMs);
+    _reconnectTimer = Timer(Duration(milliseconds: delayMs), () async {
+      _reconnectAttempts++;
+      try {
+        if (meshClient != null && !meshClient!.isConnected) {
+          await _attemptMeshUpgrade();
+          if (meshClient!.isConnected) {
+            _reconnectAttempts = 0;
+          } else {
+            _scheduleMeshReconnect();
+          }
+        }
+      } catch (_) {
+        _scheduleMeshReconnect();
+      }
+    });
+  }
+
   Future<void> _attemptMeshUpgrade() async {
     try {
       await meshClient!.connect();
       if (meshClient!.isConnected) {
+        _reconnectAttempts = 0;
         _setTransport(TransportType.p2p);
+      } else {
+        _scheduleMeshReconnect();
       }
     } catch (_) {
-      // 若 P2P 協商失敗或逾時，繼續保留 Cloud Relay
+      // 若 P2P 協商失敗或逾時，繼續保留 Cloud Relay 並排程退避重連
       _setTransport(TransportType.relay);
+      _scheduleMeshReconnect();
     }
   }
 
@@ -126,6 +165,7 @@ class DualTransportManager {
     if (rpcPath == ApiEndpoints.sendUserCascadeMessage ||
         rpcPath == ApiEndpoints.sendTerminalInput ||
         rpcPath == ApiEndpoints.handleCascadeUserInteraction ||
+        rpcPath == ApiEndpoints.cancelCascadeTask ||
         rpcPath == ApiEndpoints.writeFile) {
       return false;
     }
@@ -215,6 +255,9 @@ class DualTransportManager {
   }
 
   Future<void> disconnect() async {
+    _autoReconnect = false;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
     _relayLatencySub?.cancel();
     _meshLatencySub?.cancel();
     _meshConnSub?.cancel();

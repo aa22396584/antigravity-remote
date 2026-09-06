@@ -226,6 +226,23 @@ class MockAntigravityService {
     }
   }
 
+  /// 模擬使用者手動中止 / 取消當前任務 (Stop Task)
+  void simulateCancelTask(String cascadeId) {
+    _messageController.add(CascadeMessage(
+      id: 'msg-cancel-${DateTime.now().millisecondsSinceEpoch}',
+      cascadeId: cascadeId,
+      role: MessageRole.assistant,
+      content: '🛑 **任務已由使用者手動中止**\n\n遠端執行已取消，工作區保持當前狀態。',
+      isStreaming: false,
+      timestamp: DateTime.now(),
+    ));
+    _terminalController.add(TerminalChunk(
+      text: '^C\n[任務已被使用者手動中止]\n',
+      isError: true,
+      timestamp: DateTime.now(),
+    ));
+  }
+
   void dispose() {
     _messageController.close();
     _terminalController.close();

@@ -100,17 +100,19 @@ class CascadeNotifier extends Notifier<CascadeState> {
     );
   }
 
-  /// 發送使用者訊息 / Prompt
-  Future<void> sendPrompt(String prompt) async {
+  /// 發送使用者訊息 / Prompt (包含交付狀態追蹤與錯誤保留 - Issue #19)
+  Future<bool> sendPrompt(String prompt) async {
     final trimmed = prompt.trim();
-    if (trimmed.isEmpty) return;
+    if (trimmed.isEmpty) return false;
 
+    final userMsgId = 'msg-user-${DateTime.now().millisecondsSinceEpoch}';
     final userMsg = CascadeMessage(
-      id: 'msg-user-${DateTime.now().millisecondsSinceEpoch}',
+      id: userMsgId,
       cascadeId: state.activeCascadeId,
       role: MessageRole.user,
       content: trimmed,
       timestamp: DateTime.now(),
+      deliveryStatus: MessageDeliveryStatus.sending,
     );
     state = state.copyWith(
       messages: [...state.messages, userMsg],
@@ -124,11 +126,63 @@ class CascadeNotifier extends Notifier<CascadeState> {
         cascadeId: state.activeCascadeId,
         prompt: trimmed,
       );
+
+      _updateMessageDeliveryStatus(userMsgId, MessageDeliveryStatus.confirmed);
+      return true;
     } catch (e) {
+      _updateMessageDeliveryStatus(userMsgId, MessageDeliveryStatus.failed);
       state = state.copyWith(
         isStreaming: false,
         errorMessage: '發送訊息失敗: $e',
       );
+      return false;
+    }
+  }
+
+  void _updateMessageDeliveryStatus(String id, MessageDeliveryStatus status) {
+    final updated = state.messages.map((m) {
+      if (m.id == id) {
+        return m.copyWith(deliveryStatus: status);
+      }
+      return m;
+    }).toList();
+    state = state.copyWith(messages: updated);
+  }
+
+  /// 重新發送失敗的使用者訊息 (Retry - Issue #19)
+  Future<void> retrySendMessage(String messageId) async {
+    final msg = state.messages.firstWhere(
+      (m) => m.id == messageId,
+      orElse: () => throw ArgumentError('未找到對應訊息: $messageId'),
+    );
+
+    _updateMessageDeliveryStatus(messageId, MessageDeliveryStatus.sending);
+    state = state.copyWith(isStreaming: true, clearError: true);
+
+    try {
+      final remoteService = ref.read(remoteControlServiceProvider);
+      await remoteService.sendPrompt(
+        cascadeId: state.activeCascadeId,
+        prompt: msg.content,
+      );
+      _updateMessageDeliveryStatus(messageId, MessageDeliveryStatus.confirmed);
+    } catch (e) {
+      _updateMessageDeliveryStatus(messageId, MessageDeliveryStatus.failed);
+      state = state.copyWith(
+        isStreaming: false,
+        errorMessage: '重試發送失敗: $e',
+      );
+    }
+  }
+
+  /// 中止當前 Cascade 任務 (Stop Task - Issue #25)
+  Future<void> cancelActiveTask() async {
+    try {
+      final remoteService = ref.read(remoteControlServiceProvider);
+      await remoteService.cancelTask(cascadeId: state.activeCascadeId);
+      state = state.copyWith(isStreaming: false);
+    } catch (e) {
+      state = state.copyWith(errorMessage: '中止任務失敗: $e');
     }
   }
 

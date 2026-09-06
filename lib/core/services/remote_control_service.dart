@@ -7,6 +7,7 @@ import '../models/trajectory_step.dart';
 import '../models/user_interaction.dart';
 import '../network/dual_transport_manager.dart';
 import '../network/endpoints.dart';
+import '../utils/utf8_chunk_decoder.dart';
 import 'mock_antigravity_service.dart';
 
 /// 遠端控制中樞業務服務
@@ -18,6 +19,10 @@ class RemoteControlService {
   final _messageController = StreamController<CascadeMessage>.broadcast();
   final _interactionController = StreamController<UserInteractionRequest>.broadcast();
   final _terminalController = StreamController<TerminalChunk>.broadcast();
+
+  // 跨分包 UTF-8 解碼緩衝區，杜絕中文字元或 Emoji 被分包截斷導致亂碼 (Issue #23)
+  final Utf8ChunkDecoder _terminalUtf8Decoder = Utf8ChunkDecoder();
+  final Utf8ChunkDecoder _cascadeUtf8Decoder = Utf8ChunkDecoder();
 
   StreamSubscription? _mockMsgSub;
   StreamSubscription? _mockInteractSub;
@@ -50,6 +55,8 @@ class RemoteControlService {
     _liveTerminalSub?.cancel();
     _liveTerminalSub = null;
     _currentLiveAiMessage = null;
+    _terminalUtf8Decoder.reset();
+    _cascadeUtf8Decoder.reset();
   }
 
   void updateConfiguration({
@@ -250,7 +257,7 @@ class RemoteControlService {
       _messageController.add(msg);
     } catch (_) {
       // 若為純字串串流
-      final text = utf8.decode(payload, allowMalformed: true);
+      final text = _cascadeUtf8Decoder.decodeChunk(payload);
       if (_currentLiveAiMessage != null && text.isNotEmpty) {
         _currentLiveAiMessage = _currentLiveAiMessage!.copyWith(
           content: '${_currentLiveAiMessage!.content}$text',
@@ -366,11 +373,13 @@ class RemoteControlService {
               payload = data.sublist(5, 5 + len);
             }
           }
-          final text = utf8.decode(payload, allowMalformed: true);
-          _terminalController.add(TerminalChunk(
-            text: text,
-            timestamp: DateTime.now(),
-          ));
+          final text = _terminalUtf8Decoder.decodeChunk(payload);
+          if (text.isNotEmpty) {
+            _terminalController.add(TerminalChunk(
+              text: text,
+              timestamp: DateTime.now(),
+            ));
+          }
         },
         onError: (err) {
           _terminalController.add(TerminalChunk(
@@ -381,6 +390,37 @@ class RemoteControlService {
         },
       );
     } catch (_) {}
+  }
+
+  /// 中止 / 取消當前進行中之遠端任務 (Stop Task - Issue #25)
+  Future<void> cancelTask({required String cascadeId}) async {
+    if (_isDemoMode) {
+      MockAntigravityService.instance.simulateCancelTask(cascadeId);
+      return;
+    }
+
+    if (_transportManager == null) {
+      throw StateError('尚未建立傳輸連線');
+    }
+
+    final reqPayload = jsonEncode({'cascadeId': cascadeId});
+    await _transportManager!.callUnary(
+      ApiEndpoints.cancelCascadeTask,
+      Uint8List.fromList(utf8.encode(reqPayload)),
+    );
+
+    // 關閉並清理串流訂閱
+    _liveCascadeSub?.cancel();
+    _liveCascadeSub = null;
+
+    if (_currentLiveAiMessage != null) {
+      _currentLiveAiMessage = _currentLiveAiMessage!.copyWith(
+        isStreaming: false,
+        isThinking: false,
+        content: '${_currentLiveAiMessage!.content}\n\n🛑 **[遠端任務已手動中止]**',
+      );
+      _messageController.add(_currentLiveAiMessage!);
+    }
   }
 
   void dispose() {

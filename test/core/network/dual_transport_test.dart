@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
@@ -39,6 +40,8 @@ class FakeRelayClient extends CloudRelayClient {
 class FakeMeshClient extends WebRtcMeshClient {
   bool mockConnected = false;
   bool isDisposed = false;
+  int connectCallCount = 0;
+  final StreamController<bool> _statusCtrl = StreamController<bool>.broadcast();
 
   FakeMeshClient()
       : super(
@@ -51,11 +54,24 @@ class FakeMeshClient extends WebRtcMeshClient {
   bool get isConnected => mockConnected;
 
   @override
-  Future<void> connect() async {}
+  Stream<bool> get connectionStatusStream => _statusCtrl.stream;
+
+  void emitStatus(bool status) {
+    mockConnected = status;
+    _statusCtrl.add(status);
+  }
+
+  @override
+  Future<void> connect() async {
+    connectCallCount++;
+  }
 
   @override
   Future<void> disconnect() async {
     mockConnected = false;
+    if (!_statusCtrl.isClosed) {
+      _statusCtrl.add(false);
+    }
   }
 
   @override
@@ -69,6 +85,7 @@ class FakeMeshClient extends WebRtcMeshClient {
   @override
   void dispose() {
     isDisposed = true;
+    _statusCtrl.close();
     super.dispose();
   }
 }
@@ -143,6 +160,34 @@ void main() {
       final fallbackRes = await manager.callUnary('/test.Rpc', Uint8List(0));
       expect(utf8.decode(fallbackRes), 'Relay Fallback Response');
       expect(manager.currentTransport, TransportType.relay);
+    });
+
+    test('schedules reconnect with exponential backoff on P2P disconnection', () async {
+      final fakeRelay = FakeRelayClient();
+      final fakeMesh = FakeMeshClient();
+
+      final manager = DualTransportManager(
+        relayClient: fakeRelay,
+        meshClient: fakeMesh,
+      );
+      addTearDown(manager.dispose);
+
+      await manager.connectAll();
+      expect(manager.reconnectAttempts, 0);
+
+      // P2P connects
+      fakeMesh.emitStatus(true);
+      await Future.delayed(Duration.zero);
+      expect(manager.currentTransport, TransportType.p2p);
+
+      // P2P drops
+      fakeMesh.emitStatus(false);
+      await Future.delayed(Duration.zero);
+      expect(manager.currentTransport, TransportType.relay);
+
+      // Verify reconnect attempt is reset on manual disconnect
+      await manager.disconnect();
+      expect(manager.currentTransport, TransportType.offline);
     });
   });
 }

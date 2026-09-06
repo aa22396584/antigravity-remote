@@ -450,5 +450,74 @@ void main() {
       expect(chunks.last.text, 'git log -n 1\n');
       expect(chunks.last.text.contains('\x02'), isFalse);
     });
+
+    test('Live Mode cancelTask sends cancelCascadeTask and stops active stream', () async {
+      final harness = MockTransportHarness();
+      addTearDown(harness.dispose);
+
+      final service = RemoteControlService(
+        isDemoMode: false,
+        transportManager: harness,
+      );
+      addTearDown(service.dispose);
+
+      final messages = <CascadeMessage>[];
+      final sub = service.messageStream.listen(messages.add);
+      addTearDown(sub.cancel);
+
+      await service.sendPrompt(cascadeId: 'c-cancel-test', prompt: '執行長時間任務');
+      await Future.delayed(Duration.zero);
+      expect(messages.last.isStreaming, isTrue);
+
+      await service.cancelTask(cascadeId: 'c-cancel-test');
+      await Future.delayed(Duration.zero);
+
+      expect(harness.unaryCalls.any((c) => c.rpcPath == ApiEndpoints.cancelCascadeTask), isTrue);
+      expect(messages.last.isStreaming, isFalse);
+      expect(messages.last.content, contains('遠端任務已手動中止'));
+    });
+
+    test('Live Terminal stream uses Utf8ChunkDecoder to decode split Chinese character across packets', () async {
+      final harness = MockTransportHarness();
+      addTearDown(harness.dispose);
+
+      final service = RemoteControlService(
+        isDemoMode: false,
+        transportManager: harness,
+      );
+      addTearDown(service.dispose);
+
+      final chunks = <TerminalChunk>[];
+      final sub = service.terminalStream.listen(chunks.add);
+      addTearDown(sub.cancel);
+
+      // Start live terminal stream
+      await service.sendPrompt(cascadeId: 'c-term-utf8', prompt: '啟動終端');
+
+      // '漢' in UTF-8 is 3 bytes: [230, 184, 137]
+      final hanBytes = utf8.encode('漢');
+      expect(hanBytes.length, 3);
+
+      // Packet 1 has first 2 bytes
+      final p1 = WebRtcMeshClient.frameMessage(
+        Uint8List.fromList(hanBytes.sublist(0, 2)),
+        flag: 0x02,
+      );
+      // Packet 2 has 3rd byte + '字\n'
+      final p2 = WebRtcMeshClient.frameMessage(
+        Uint8List.fromList([...hanBytes.sublist(2), ...utf8.encode('字\n')]),
+        flag: 0x02,
+      );
+
+      harness.terminalStreamController.add(p1);
+      await Future.delayed(Duration.zero);
+
+      harness.terminalStreamController.add(p2);
+      await Future.delayed(Duration.zero);
+
+      final combined = chunks.map((c) => c.text).join();
+      expect(combined, contains('漢字\n'));
+      expect(combined.contains('\uFFFD'), isFalse);
+    });
   });
 }

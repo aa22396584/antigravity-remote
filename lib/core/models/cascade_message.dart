@@ -6,6 +6,14 @@ enum MessageRole {
   system,
 }
 
+/// 訊息交付狀態 (Issue #19)
+enum MessageDeliveryStatus {
+  sending,
+  confirmed,
+  failed,
+  unknown,
+}
+
 class CascadeMessage {
   final String id;
   final String cascadeId;
@@ -17,6 +25,7 @@ class CascadeMessage {
   final List<TrajectoryStep> trajectorySteps;
   final bool isStreaming;
   final DateTime timestamp;
+  final MessageDeliveryStatus deliveryStatus;
 
   const CascadeMessage({
     required this.id,
@@ -29,6 +38,7 @@ class CascadeMessage {
     this.trajectorySteps = const [],
     this.isStreaming = false,
     required this.timestamp,
+    this.deliveryStatus = MessageDeliveryStatus.confirmed,
   });
 
   CascadeMessage copyWith({
@@ -42,6 +52,7 @@ class CascadeMessage {
     List<TrajectoryStep>? trajectorySteps,
     bool? isStreaming,
     DateTime? timestamp,
+    MessageDeliveryStatus? deliveryStatus,
   }) {
     return CascadeMessage(
       id: id ?? this.id,
@@ -54,6 +65,7 @@ class CascadeMessage {
       trajectorySteps: trajectorySteps ?? this.trajectorySteps,
       isStreaming: isStreaming ?? this.isStreaming,
       timestamp: timestamp ?? this.timestamp,
+      deliveryStatus: deliveryStatus ?? this.deliveryStatus,
     );
   }
 
@@ -68,6 +80,7 @@ class CascadeMessage {
     'trajectorySteps': trajectorySteps.map((s) => s.toJson()).toList(),
     'isStreaming': isStreaming,
     'timestamp': timestamp.toIso8601String(),
+    'deliveryStatus': deliveryStatus.name,
   };
 
   factory CascadeMessage.fromJson(Map<String, dynamic> json) {
@@ -76,6 +89,7 @@ class CascadeMessage {
     final durationMs = json['thinkingDurationMs'] ?? json['thinking_duration_ms'];
     final rawIsThinking = json['isThinking'] ?? json['is_thinking'];
     final rawIsStreaming = json['isStreaming'] ?? json['is_streaming'];
+    final rawDelivery = json['deliveryStatus']?.toString();
 
     return CascadeMessage(
       id: (json['id'] ?? json['message_id'] ?? json['msg_id']) as String? ?? '',
@@ -108,6 +122,10 @@ class CascadeMessage {
                   (json['timestamp'] ?? json['created_at']) as String) ??
               DateTime.now()
           : DateTime.now(),
+      deliveryStatus: MessageDeliveryStatus.values.firstWhere(
+        (e) => e.name == rawDelivery,
+        orElse: () => MessageDeliveryStatus.confirmed,
+      ),
     );
   }
 }
