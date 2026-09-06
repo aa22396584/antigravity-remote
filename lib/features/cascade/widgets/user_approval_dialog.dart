@@ -58,24 +58,27 @@ class _UserApprovalDialogState extends State<UserApprovalDialog> {
     final req = widget.request;
     final isDestructive = req.isDestructive || _isDestructive(req.actionTarget);
 
-    return Container(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-        left: 16,
-        right: 16,
-        top: 10,
-      ),
-      decoration: const BoxDecoration(
-        color: CyberColors.cardElevated,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        border: Border(
-          top: BorderSide(color: CyberColors.amber, width: 2),
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 12,
+          left: 16,
+          right: 16,
+          top: 10,
         ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+        decoration: const BoxDecoration(
+          color: CyberColors.cardElevated,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          border: Border(
+            top: BorderSide(color: CyberColors.amber, width: 2),
+          ),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
           // Drag handle
           Center(
             child: Container(
@@ -212,6 +215,7 @@ class _UserApprovalDialogState extends State<UserApprovalDialog> {
                   color: CyberColors.red,
                   isOutlined: true,
                   icon: Icons.close,
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
                   onPressed: () {
                     final feedback = _feedbackController.text.trim();
                     widget.onRespond(false, feedback.isNotEmpty ? feedback : null);
@@ -219,12 +223,13 @@ class _UserApprovalDialogState extends State<UserApprovalDialog> {
                   },
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 10),
               Expanded(
                 child: CyberButton(
                   text: '核准執行 (Approve)',
                   color: CyberColors.emerald,
                   icon: Icons.check,
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
                   onPressed: () {
                     final feedback = _feedbackController.text.trim();
                     widget.onRespond(true, feedback.isNotEmpty ? feedback : null);
@@ -236,6 +241,8 @@ class _UserApprovalDialogState extends State<UserApprovalDialog> {
           ),
         ],
       ),
-    );
+    ),
+  ),
+);
   }
 }

@@ -48,13 +48,17 @@ class CyberButton extends StatelessWidget {
           Icon(icon, size: 18, color: effectiveTextColor),
           const SizedBox(width: 8),
         ],
-        Text(
-          text,
-          style: TextStyle(
-            color: effectiveTextColor,
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.3,
+        Flexible(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: effectiveTextColor,
+              fontSize: 13.5,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.3,
+            ),
           ),
         ),
       ],

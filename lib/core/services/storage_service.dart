@@ -36,7 +36,7 @@ class StorageService {
       _prefs.setString(_keyEnvironment, env.name);
 
   // Demo Mode
-  bool isDemoMode() => _prefs.getBool(_keyDemoMode) ?? false;
+  bool isDemoMode() => _prefs.getBool(_keyDemoMode) ?? true;
   Future<void> setDemoMode(bool enabled) => _prefs.setBool(_keyDemoMode, enabled);
 
   // Paired Devices List
