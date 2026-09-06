@@ -64,6 +64,16 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
     final messenger = ScaffoldMessenger.of(context);
 
     ref.listen<CascadeState>(cascadeProvider, (prev, next) {
+      if (next.errorMessage != null && prev?.errorMessage != next.errorMessage) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(next.errorMessage!),
+            backgroundColor: CyberColors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+
       final prevLast = prev?.messages.isNotEmpty == true ? prev!.messages.last : null;
       final nextLast = next.messages.isNotEmpty == true ? next.messages.last : null;
       final contentChanged = prevLast?.content != nextLast?.content ||

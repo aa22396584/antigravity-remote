@@ -75,15 +75,23 @@ class _ChatInputBarState extends State<ChatInputBar> {
                 return ActionChip(
                   label: Text(
                     prompt,
-                    style: const TextStyle(fontSize: 11.5, color: CyberColors.textSecondary),
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: widget.isStreaming ? CyberColors.textMuted : CyberColors.textSecondary,
+                    ),
                   ),
                   backgroundColor: CyberColors.surfaceElevated,
                   side: const BorderSide(color: CyberColors.subtleBorder),
                   padding: const EdgeInsets.symmetric(horizontal: 4),
-                  onPressed: () {
-                    _textController.text = prompt;
-                    _submit();
-                  },
+                  onPressed: widget.isStreaming
+                      ? null
+                      : () {
+                          if (_textController.text.trim().isNotEmpty) {
+                            return;
+                          }
+                          _textController.text = prompt;
+                          _submit();
+                        },
                 );
               },
             ),

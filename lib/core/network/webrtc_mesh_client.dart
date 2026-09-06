@@ -87,6 +87,13 @@ class FrameAccumulator {
   int get bufferedBytes => _buffer.length;
 }
 
+/// Channel Binding 握手狀態機
+enum ChannelAuthState {
+  unauthenticated,
+  challengePending,
+  authenticated,
+}
+
 class WebRtcMeshClient implements TransportClient {
   static const int signalingPollTimeoutSeconds = 30;
 
@@ -109,6 +116,7 @@ class WebRtcMeshClient implements TransportClient {
   Timer? _signalingTimer;
 
   bool _isChannelAuthenticated = false;
+  ChannelAuthState _authState = ChannelAuthState.unauthenticated;
   int? _lastLatencyMs;
   final _latencyController = StreamController<int>.broadcast();
   final _connectionStatusController = StreamController<bool>.broadcast();
@@ -297,6 +305,7 @@ class WebRtcMeshClient implements TransportClient {
       } else if (state == RTCDataChannelState.RTCDataChannelClosed) {
         if (channelLabel == 'proxy-channel') {
           _isChannelAuthenticated = false;
+          _authState = ChannelAuthState.unauthenticated;
         }
       }
     };
@@ -317,40 +326,55 @@ class WebRtcMeshClient implements TransportClient {
     final payload = frame.payload;
     final flag = frame.flag;
 
-    // 1. Channel Binding 握手挑戰與確認處理 (P0 #10: 嚴格認證閘門)
-    if (!_isChannelAuthenticated) {
-      try {
-        final text = utf8.decode(payload);
-        final challengeJson = jsonDecode(text);
-        if (challengeJson is Map) {
-          // 收到桌面端 Nonce 挑戰 -> 進行私鑰簽名並回傳 Response (此時仍為未認證狀態)
-          if (challengeJson['challenge_nonce'] != null) {
-            await _respondToChannelBindingChallenge(
-              challengeJson['challenge_nonce'] as String,
-            );
-            return;
-          }
-          // 收到桌面端 Channel Binding ACK 確認 -> 方可正式標記為已認證並放行通道
-          if (challengeJson['type'] == 'channel_binding_ack' ||
-              challengeJson['type'] == 'channel_binding_success' ||
-              challengeJson['channel_binding_ack'] == true ||
-              challengeJson['authenticated'] == true) {
-            _isChannelAuthenticated = true;
-            _lastLatencyMs = 12; // Initial P2P estimate
-            if (!_connectionStatusController.isClosed) {
-              _connectionStatusController.add(true);
+    // 1. Channel Binding 握手挑戰與確認處理 (P0 #10: 嚴格認證閘門與狀態機)
+    if (_authState != ChannelAuthState.authenticated) {
+      // 認證封包必須且只能在控制頻道 (proxy-channel) 且 flag == 0x00 上遞送，杜絕從輔助串流繞過
+      final isControlChannel = (fromChannel == null || fromChannel == 'proxy-channel') && flag == 0x00;
+      if (isControlChannel) {
+        try {
+          final text = utf8.decode(payload);
+          final challengeJson = jsonDecode(text);
+          if (challengeJson is Map) {
+            // 收到對端拒絕連線或認證失敗信號 -> 立即中斷連線
+            if (challengeJson['type'] == 'channel_binding_rejected' ||
+                challengeJson['error'] != null) {
+              await disconnect();
+              return;
             }
-            if (!_latencyController.isClosed) {
-              _latencyController.add(_lastLatencyMs!);
+
+            // 收到桌面端 Nonce 挑戰 -> 進行私鑰簽名並回傳 Response (進入 challengePending 狀態)
+            if (challengeJson['challenge_nonce'] != null) {
+              await _respondToChannelBindingChallenge(
+                challengeJson['challenge_nonce'] as String,
+              );
+              _authState = ChannelAuthState.challengePending;
+              return;
             }
-            return;
+
+            // 收到桌面端 Channel Binding ACK 確認 -> 必須嚴格在 challengePending 狀態下方放行
+            if (_authState == ChannelAuthState.challengePending &&
+                (challengeJson['type'] == 'channel_binding_ack' ||
+                    challengeJson['type'] == 'channel_binding_success' ||
+                    challengeJson['channel_binding_ack'] == true ||
+                    challengeJson['authenticated'] == true)) {
+              _authState = ChannelAuthState.authenticated;
+              _isChannelAuthenticated = true;
+              _lastLatencyMs = 12; // Initial P2P estimate
+              if (!_connectionStatusController.isClosed) {
+                _connectionStatusController.add(true);
+              }
+              if (!_latencyController.isClosed) {
+                _latencyController.add(_lastLatencyMs!);
+              }
+              return;
+            }
           }
+        } catch (_) {
+          // 非 JSON 或解析失敗
         }
-      } catch (_) {
-        // 非 JSON 或解析失敗
       }
 
-      // 嚴格安全界線：在收到 Channel Binding ACK 之前，所有非握手封包一律阻絕丟棄！
+      // 嚴格安全界線：在收到合法的 Channel Binding ACK 之前，所有業務封包一律阻絕丟棄！
       return;
     }
 
@@ -376,6 +400,9 @@ class WebRtcMeshClient implements TransportClient {
         fromChannel != 'terminal-channel') {
       int? resRequestId;
       Uint8List? resPayload;
+      bool isError = false;
+      String? errorMessage;
+      int? statusCode;
 
       try {
         final text = utf8.decode(payload);
@@ -385,6 +412,20 @@ class WebRtcMeshClient implements TransportClient {
           if (rawId != null) {
             resRequestId = rawId is int ? rawId : int.tryParse(rawId.toString());
           }
+
+          if (json['error'] != null || json['is_error'] == true) {
+            isError = true;
+            errorMessage = json['error']?.toString() ?? json['message']?.toString() ?? 'RPC Error';
+          }
+          if (json['status_code'] != null) {
+            final rawCode = json['status_code'];
+            statusCode = rawCode is int ? rawCode : int.tryParse(rawCode.toString());
+            if (statusCode != null && statusCode != 200) {
+              isError = true;
+              errorMessage ??= 'RPC Error (HTTP $statusCode)';
+            }
+          }
+
           if (json.containsKey('payload')) {
             final raw = json['payload'];
             if (raw is String) {
@@ -400,10 +441,19 @@ class WebRtcMeshClient implements TransportClient {
         }
       } catch (_) {}
 
-      // 根據明確 RequestID 配對 Completer
+      // 根據明確 RequestID 配對 Completer (P0 #2 & P0 #4: 若對端回傳錯誤，以 RpcException 拒絕)
       if (resRequestId != null && _pendingRequests.containsKey(resRequestId)) {
         final completer = _pendingRequests.remove(resRequestId);
-        completer?.complete(resPayload ?? payload);
+        if (isError) {
+          completer?.completeError(
+            RpcException(
+              errorMessage ?? 'RPC execution failed',
+              statusCode: statusCode,
+            ),
+          );
+        } else {
+          completer?.complete(resPayload ?? payload);
+        }
         return;
       }
 
@@ -524,30 +574,44 @@ class WebRtcMeshClient implements TransportClient {
     if (!isConnected ||
         _dataChannel == null ||
         _dataChannel!.state != RTCDataChannelState.RTCDataChannelOpen) {
-      throw Exception('WebRTC DataChannel is not connected or authenticated');
+      throw PreFlightException('WebRTC DataChannel is not connected or authenticated');
     }
 
     final reqId = _requestIdCounter++;
     final completer = Completer<Uint8List>();
     _pendingRequests[reqId] = completer;
 
-    // 將 RequestID、RPC Path 與 Payload 封裝入通訊信封 (P0 #2: 明確 RequestID 與 RPC 標記)
-    final envelope = jsonEncode({
-      'request_id': reqId,
-      'rpc_path': rpcPath,
-      'payload': base64Encode(payload),
-    });
+    try {
+      // 將 RequestID、RPC Path 與 Payload 封裝入通訊信封 (P0 #2: 明確 RequestID 與 RPC 標記)
+      final envelope = jsonEncode({
+        'request_id': reqId,
+        'rpc_path': rpcPath,
+        'payload': base64Encode(payload),
+      });
 
-    final frame = frameMessage(Uint8List.fromList(utf8.encode(envelope)), flag: 0x00);
-    _dataChannel!.send(RTCDataChannelMessage.fromBinary(frame));
+      final frame = frameMessage(Uint8List.fromList(utf8.encode(envelope)), flag: 0x00);
+      _dataChannel!.send(RTCDataChannelMessage.fromBinary(frame));
+    } catch (e) {
+      _pendingRequests.remove(reqId);
+      throw PreFlightException('Failed to transmit frame to DataChannel: $e', cause: e);
+    }
 
-    return completer.future.timeout(
-      const Duration(seconds: 15),
-      onTimeout: () {
-        _pendingRequests.remove(reqId);
-        throw TimeoutException('P2P DataChannel RPC timeout: $rpcPath (reqId: $reqId)');
-      },
-    );
+    // 封包已成功交付送出至網路 (Committed In-flight)
+    try {
+      return await completer.future.timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          _pendingRequests.remove(reqId);
+          throw TimeoutException('P2P DataChannel RPC timeout: $rpcPath (reqId: $reqId)');
+        },
+      );
+    } catch (e) {
+      _pendingRequests.remove(reqId);
+      if (e is RpcException) {
+        rethrow;
+      }
+      throw InFlightRpcException(rpcPath: rpcPath, cause: e);
+    }
   }
 
   @override
@@ -585,6 +649,7 @@ class WebRtcMeshClient implements TransportClient {
 
   @override
   Future<void> disconnect() async {
+    _authState = ChannelAuthState.unauthenticated;
     _isChannelAuthenticated = false;
     if (!_connectionStatusController.isClosed) {
       _connectionStatusController.add(false);
@@ -631,7 +696,19 @@ class WebRtcMeshClient implements TransportClient {
   bool get isChannelAuthenticatedForTesting => _isChannelAuthenticated;
 
   @visibleForTesting
-  void setChannelAuthenticatedForTesting(bool val) => _isChannelAuthenticated = val;
+  void setChannelAuthenticatedForTesting(bool val) {
+    _isChannelAuthenticated = val;
+    _authState = val ? ChannelAuthState.authenticated : ChannelAuthState.unauthenticated;
+  }
+
+  @visibleForTesting
+  ChannelAuthState get authStateForTesting => _authState;
+
+  @visibleForTesting
+  void setAuthStateForTesting(ChannelAuthState state) {
+    _authState = state;
+    _isChannelAuthenticated = state == ChannelAuthState.authenticated;
+  }
 
   @visibleForTesting
   Map<int, Completer<Uint8List>> get pendingRequestsForTesting => _pendingRequests;

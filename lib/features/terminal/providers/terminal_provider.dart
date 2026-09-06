@@ -78,8 +78,17 @@ class TerminalNotifier extends Notifier<TerminalState> {
         : updated;
     state = state.copyWith(chunks: trimmed);
 
-    final remoteService = ref.read(remoteControlServiceProvider);
-    await remoteService.sendTerminalInput(input);
+    try {
+      final remoteService = ref.read(remoteControlServiceProvider);
+      await remoteService.sendTerminalInput(input);
+    } catch (e) {
+      final errChunk = TerminalChunk(
+        text: '\n[錯誤] 終端指令發送失敗: $e\n',
+        isError: true,
+        timestamp: DateTime.now(),
+      );
+      state = state.copyWith(chunks: [...state.chunks, errChunk]);
+    }
   }
 
   void sendShortcut(String key) {

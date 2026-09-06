@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import '../models/instance_info.dart';
 import 'cloud_relay_client.dart';
 import 'endpoints.dart';
+import 'transport_interface.dart';
 import 'webrtc_mesh_client.dart';
 
 /// 當非冪等操作在傳輸層已送出 (In-flight) 但確認失敗時拋出，防止自動重送造成重複寫入 (P0 #3)
@@ -163,8 +164,26 @@ class DualTransportManager {
           _setTransport(TransportType.p2p);
         }
         return result;
-      } catch (e) {
+      } on PreFlightException {
+        // 根本未送出至網路線路，切換為中繼並安全重試（即使非冪等操作也不會造成重複執行）
+        _setTransport(TransportType.relay);
+        return relayClient.callUnary(rpcPath, payload);
+      } on InFlightRpcException catch (e) {
         // P2P 呼叫已在途中 (in-flight)。若為非冪等性請求，嚴禁自動透過 Relay 重送！(P0 #3)
+        _setTransport(TransportType.relay);
+        if (!idempotent) {
+          throw DuplicateExecutionPreventedException(
+            rpcPath: rpcPath,
+            cause: e.cause,
+          );
+        }
+        // 冪等性請求方可安全回退 Relay 重試
+        return relayClient.callUnary(rpcPath, payload);
+      } on RpcException {
+        // 對端明確回傳業務錯誤，直接拋出，不觸發重複重試
+        rethrow;
+      } catch (e) {
+        // 其他未知異常（防禦性處理）
         _setTransport(TransportType.relay);
         if (!idempotent) {
           throw DuplicateExecutionPreventedException(
@@ -172,7 +191,6 @@ class DualTransportManager {
             cause: e,
           );
         }
-        // 冪等性請求方可安全回退 Relay 重試
         return relayClient.callUnary(rpcPath, payload);
       }
     }

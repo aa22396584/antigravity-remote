@@ -132,12 +132,19 @@ class CascadeNotifier extends Notifier<CascadeState> {
     }
   }
 
+  final Set<String> _inFlightApprovals = {};
+
   /// 處理使用者授權審批 (核准 / 拒絕) (P0 #4: 必須等待遠端 RPC 返回成功確認)
   Future<void> handleApproval({
     required String interactionId,
     required bool approved,
     String? feedback,
   }) async {
+    if (_inFlightApprovals.contains(interactionId)) {
+      throw StateError('該審批請求正在提交中，請勿重複送出');
+    }
+    _inFlightApprovals.add(interactionId);
+
     final remoteService = ref.read(remoteControlServiceProvider);
 
     try {
@@ -168,7 +175,7 @@ class CascadeNotifier extends Notifier<CascadeState> {
 
       state = state.copyWith(
         messages: updatedMessages,
-        clearPendingInteraction: true,
+        clearPendingInteraction: state.pendingInteraction?.interactionId == interactionId,
         clearError: true,
       );
     } catch (e) {
@@ -177,6 +184,8 @@ class CascadeNotifier extends Notifier<CascadeState> {
         errorMessage: '審批提交失敗，遠端未確認執行: $e',
       );
       rethrow;
+    } finally {
+      _inFlightApprovals.remove(interactionId);
     }
   }
 

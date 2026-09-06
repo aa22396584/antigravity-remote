@@ -6,6 +6,7 @@ import 'package:antigravity_remote/core/models/instance_info.dart';
 import 'package:antigravity_remote/core/network/cloud_relay_client.dart';
 import 'package:antigravity_remote/core/network/dual_transport_manager.dart';
 import 'package:antigravity_remote/core/network/endpoints.dart';
+import 'package:antigravity_remote/core/network/transport_interface.dart';
 import 'package:antigravity_remote/core/network/webrtc_mesh_client.dart';
 
 class FakeRelayForP0Test extends CloudRelayClient {
@@ -38,6 +39,7 @@ class FakeRelayForP0Test extends CloudRelayClient {
 class FakeMeshForP0Test extends WebRtcMeshClient {
   bool isP2pOpen = true;
   bool shouldThrowOnCall = false;
+  bool throwPreFlight = false;
   Exception? errorToThrow;
   int meshCallCount = 0;
 
@@ -62,8 +64,14 @@ class FakeMeshForP0Test extends WebRtcMeshClient {
   @override
   Future<Uint8List> callUnary(String rpcPath, Uint8List payload) async {
     meshCallCount++;
+    if (throwPreFlight) {
+      throw const PreFlightException('DataChannel send buffer failed');
+    }
     if (shouldThrowOnCall) {
-      throw errorToThrow ?? TimeoutException('P2P DataChannel timeout on $rpcPath');
+      throw InFlightRpcException(
+        rpcPath: rpcPath,
+        cause: errorToThrow ?? TimeoutException('P2P DataChannel timeout on $rpcPath'),
+      );
     }
     return Uint8List.fromList(utf8.encode('{"status":"P2P_OK"}'));
   }
@@ -170,6 +178,97 @@ void main() {
       await Future.delayed(const Duration(milliseconds: 10));
       expect(cascadeChunks, isNotEmpty);
       expect(utf8.decode(cascadeChunks.first), contains('authenticated thinking'));
+    });
+
+    test('strictly rejects Channel Binding ACK if received on auxiliary channel or with non-zero flag', () async {
+      final client = WebRtcMeshClient(
+        baseUrl: 'https://mock.googleapis.com',
+        googleAccessToken: 'mock-token',
+        targetInstanceUuid: 'mock-uuid',
+      );
+      addTearDown(client.dispose);
+
+      // 先經歷正常的 Challenge 階段使狀態處於 challengePending
+      final challengeFrame = FramePacket(
+        flag: 0x00,
+        payload: Uint8List.fromList(utf8.encode(jsonEncode({
+          'challenge_nonce': 'nonce-1234567890123456789012345678',
+        }))),
+      );
+      await client.routeFrameForTesting(challengeFrame, fromChannel: 'proxy-channel');
+      expect(client.authStateForTesting, ChannelAuthState.challengePending);
+
+      // 1. 攻擊者嘗試在 cascade-channel 上注入 ACK
+      final spoofAckCascade = FramePacket(
+        flag: 0x00,
+        payload: Uint8List.fromList(utf8.encode(jsonEncode({'type': 'channel_binding_ack'}))),
+      );
+      await client.routeFrameForTesting(spoofAckCascade, fromChannel: 'cascade-channel');
+      expect(client.isChannelAuthenticatedForTesting, isFalse, reason: '不得接受來自 cascade-channel 的 ACK');
+
+      // 2. 攻擊者嘗試攜帶 flag: 0x01 (非控制旗標) 注入 ACK
+      final spoofAckFlag = FramePacket(
+        flag: 0x01,
+        payload: Uint8List.fromList(utf8.encode(jsonEncode({'type': 'channel_binding_ack'}))),
+      );
+      await client.routeFrameForTesting(spoofAckFlag, fromChannel: 'proxy-channel');
+      expect(client.isChannelAuthenticatedForTesting, isFalse, reason: '不得接受帶有非 0x00 旗標的 ACK');
+    });
+
+    test('strictly rejects unsolicited Channel Binding ACK if no challenge nonce was ever received', () async {
+      final client = WebRtcMeshClient(
+        baseUrl: 'https://mock.googleapis.com',
+        googleAccessToken: 'mock-token',
+        targetInstanceUuid: 'mock-uuid',
+      );
+      addTearDown(client.dispose);
+
+      expect(client.authStateForTesting, ChannelAuthState.unauthenticated);
+
+      // 攻擊者未發起 challenge_nonce，直接偽造 ACK
+      final unpromptedAck = FramePacket(
+        flag: 0x00,
+        payload: Uint8List.fromList(utf8.encode(jsonEncode({
+          'type': 'channel_binding_ack',
+          'authenticated': true,
+        }))),
+      );
+      await client.routeFrameForTesting(unpromptedAck, fromChannel: 'proxy-channel');
+
+      // 斷言：未經歷挑戰前，不請自來的 ACK 必須被嚴格阻絕，認證狀態維持 false
+      expect(client.isChannelAuthenticatedForTesting, isFalse);
+      expect(client.authStateForTesting, ChannelAuthState.unauthenticated);
+    });
+
+    test('disconnects and resets auth state upon receiving channel_binding_rejected or error', () async {
+      final client = WebRtcMeshClient(
+        baseUrl: 'https://mock.googleapis.com',
+        googleAccessToken: 'mock-token',
+        targetInstanceUuid: 'mock-uuid',
+      );
+      addTearDown(client.dispose);
+
+      final challengeFrame = FramePacket(
+        flag: 0x00,
+        payload: Uint8List.fromList(utf8.encode(jsonEncode({
+          'challenge_nonce': 'nonce-reject-test',
+        }))),
+      );
+      await client.routeFrameForTesting(challengeFrame, fromChannel: 'proxy-channel');
+      expect(client.authStateForTesting, ChannelAuthState.challengePending);
+
+      // 桌面端返回拒絕
+      final rejectFrame = FramePacket(
+        flag: 0x00,
+        payload: Uint8List.fromList(utf8.encode(jsonEncode({
+          'type': 'channel_binding_rejected',
+          'error': 'AUTH_FAILED',
+        }))),
+      );
+      await client.routeFrameForTesting(rejectFrame, fromChannel: 'proxy-channel');
+
+      expect(client.isChannelAuthenticatedForTesting, isFalse);
+      expect(client.authStateForTesting, ChannelAuthState.unauthenticated);
     });
   });
 
@@ -307,6 +406,46 @@ void main() {
       expect(terminalEvents.length, 1);
       expect(utf8.decode(terminalEvents.first), 'terminal output chunk\n');
     });
+
+    test('completes with RpcException when remote host returns error payload (P0 #2 & P0 #4)', () async {
+      final client = WebRtcMeshClient(
+        baseUrl: 'https://mock.googleapis.com',
+        googleAccessToken: 'mock-token',
+        targetInstanceUuid: 'mock-uuid',
+      );
+      addTearDown(client.dispose);
+
+      client.setChannelAuthenticatedForTesting(true);
+
+      final completer = Completer<Uint8List>();
+      client.pendingRequestsForTesting[301] = completer;
+
+      final expectFuture = expectLater(
+        completer.future,
+        throwsA(
+          isA<RpcException>().having(
+            (e) => e.message,
+            'message',
+            contains('Permission denied'),
+          ),
+        ),
+      );
+
+      // 模擬遠端主機回傳錯誤訊息
+      final errFrame = FramePacket(
+        flag: 0x00,
+        payload: Uint8List.fromList(utf8.encode(jsonEncode({
+          'request_id': 301,
+          'error': 'Permission denied: command rejected by host policy',
+          'status_code': 403,
+        }))),
+      );
+
+      await client.routeFrameForTesting(errFrame);
+
+      expect(completer.isCompleted, isTrue);
+      await expectFuture;
+    });
   });
 
   group('P0 #3: 寫入重複執行防禦測試 (Duplicate Write on Relay Retry Tests)', () {
@@ -391,6 +530,30 @@ void main() {
       expect(utf8.decode(res), '{"status":"RELAY_OK"}');
       expect(fakeMesh.meshCallCount, 0, reason: 'P2P 未連線，直接由 Relay 承接首發');
       expect(fakeRelay.callCount, 1);
+    });
+
+    test('allows safe relay fallback for non-idempotent RPC when error is PreFlightException (never sent onto wire, P0 #3)', () async {
+      final fakeRelay = FakeRelayForP0Test();
+      final fakeMesh = FakeMeshForP0Test();
+      fakeMesh.isP2pOpen = true;
+      fakeMesh.throwPreFlight = true; // 模擬封包根本未送出至網路線路 (例如 DataChannel 未開啟或緩衝異常)
+
+      final manager = DualTransportManager(
+        relayClient: fakeRelay,
+        meshClient: fakeMesh,
+      );
+      addTearDown(manager.dispose);
+
+      // 非冪等請求在 PreFlight 失敗時（根本未送出），安全允許 Relay 接續發送，杜絕中斷業務
+      final res = await manager.callUnary(
+        ApiEndpoints.sendUserCascadeMessage,
+        Uint8List.fromList(utf8.encode('{"prompt":"hello"}')),
+      );
+
+      expect(utf8.decode(res), '{"status":"RELAY_OK"}');
+      expect(fakeMesh.meshCallCount, 1, reason: '嘗試過 P2P 但於 PreFlight 失敗');
+      expect(fakeRelay.callCount, 1, reason: '根本未送出的非冪等請求安全 Fallback 至 Relay');
+      expect(manager.currentTransport, TransportType.relay);
     });
   });
 }

@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:antigravity_remote/core/models/cascade_message.dart';
@@ -8,6 +10,7 @@ import 'package:antigravity_remote/core/models/user_interaction.dart';
 import 'package:antigravity_remote/core/services/remote_control_service.dart';
 import 'package:antigravity_remote/features/cascade/providers/cascade_provider.dart';
 import 'package:antigravity_remote/features/device/providers/device_provider.dart';
+import 'package:antigravity_remote/core/network/transport_interface.dart';
 import '../../test_harness/mock_transport_harness.dart';
 
 void main() {
@@ -159,6 +162,200 @@ void main() {
       expect(finishedStep.status, StepStatus.completed);
       expect(finishedStep.interaction?.status, InteractionStatus.approved);
       expect(state.errorMessage, isNull);
+    });
+
+    test('retains pending interaction and preserves step status when remote approval RPC fails with RpcException', () async {
+      final harness = MockTransportHarness();
+      addTearDown(harness.dispose);
+
+      // 模擬對端遠端主機回傳明確業務拒絕錯誤 (例如 403 Forbidden 或 reject)
+      harness.unaryError = const RpcException('Permission denied by remote agent', statusCode: 403);
+
+      final container = ProviderContainer(
+        overrides: [
+          remoteControlServiceProvider.overrideWithValue(
+            RemoteControlService(
+              isDemoMode: false,
+              transportManager: harness,
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(cascadeProvider.notifier);
+
+      final interactionReq = UserInteractionRequest(
+        interactionId: 'req-forbidden-cmd',
+        type: UserInteractionType.askPermission,
+        title: '請求高危指令',
+        description: '需特定權限',
+        actionTarget: 'sudo reboot',
+        requestedAt: DateTime.now(),
+      );
+
+      final step = TrajectoryStep(
+        stepId: 'step-reboot-01',
+        type: StepType.toolCall,
+        toolName: 'run_command',
+        summary: '重啟指令',
+        status: StepStatus.waitingUserInteraction,
+        interaction: interactionReq,
+        timestamp: DateTime.now(),
+      );
+
+      notifier.state = notifier.state.copyWith(
+        messages: [
+          CascadeMessage(
+            id: 'msg-rpc-err',
+            cascadeId: 'cascade-1',
+            role: MessageRole.assistant,
+            content: '',
+            trajectorySteps: [step],
+            timestamp: DateTime.now(),
+          ),
+        ],
+        pendingInteraction: interactionReq,
+      );
+
+      // 預期拋出 RpcException
+      await expectLater(
+        notifier.handleApproval(
+          interactionId: 'req-forbidden-cmd',
+          approved: true,
+        ),
+        throwsA(isA<RpcException>()),
+      );
+
+      // 斷言：待審批項與步驟狀態依然完整保留！
+      final state = container.read(cascadeProvider);
+      expect(state.pendingInteraction?.interactionId, 'req-forbidden-cmd');
+      expect(state.messages.first.trajectorySteps.first.status, StepStatus.waitingUserInteraction);
+      expect(state.errorMessage, contains('審批提交失敗，遠端未確認執行'));
+    });
+
+    test('prevents concurrent handleApproval calls for the same interactionId (throws StateError)', () async {
+      final harness = MockTransportHarness();
+      addTearDown(harness.dispose);
+
+      final completer = Completer<Uint8List>();
+      harness.onCallUnary = (path, payload) => completer.future;
+
+      final container = ProviderContainer(
+        overrides: [
+          remoteControlServiceProvider.overrideWithValue(
+            RemoteControlService(
+              isDemoMode: false,
+              transportManager: harness,
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(cascadeProvider.notifier);
+
+      final interactionReq = UserInteractionRequest(
+        interactionId: 'req-concurrent-01',
+        type: UserInteractionType.askPermission,
+        title: '請求指令',
+        description: '併發測試指令',
+        actionTarget: 'echo concurrent',
+        requestedAt: DateTime.now(),
+      );
+
+      notifier.state = notifier.state.copyWith(
+        pendingInteraction: interactionReq,
+      );
+
+      // 第一次審批呼叫（在途中，尚未收到遠端回應）
+      final firstCall = notifier.handleApproval(
+        interactionId: 'req-concurrent-01',
+        approved: true,
+      );
+
+      // 第二次呼叫同一個 interactionId（模擬連續快速點擊）
+      expect(
+        () => notifier.handleApproval(
+          interactionId: 'req-concurrent-01',
+          approved: true,
+        ),
+        throwsA(isA<StateError>()),
+        reason: '在途審批嚴禁重複提交發起',
+      );
+
+      // 解鎖第一次呼叫完成
+      completer.complete(Uint8List.fromList(utf8.encode('{"status":"OK"}')));
+      await firstCall;
+    });
+
+    test('does not clear pendingInteraction if a different interactionId completes', () async {
+      final harness = MockTransportHarness();
+      addTearDown(harness.dispose);
+
+      final container = ProviderContainer(
+        overrides: [
+          remoteControlServiceProvider.overrideWithValue(
+            RemoteControlService(
+              isDemoMode: false,
+              transportManager: harness,
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(cascadeProvider.notifier);
+
+      final currentPending = UserInteractionRequest(
+        interactionId: 'req-active-now',
+        type: UserInteractionType.askPermission,
+        title: '當前待審批',
+        description: '當前待審批項目',
+        actionTarget: 'ls -la',
+        requestedAt: DateTime.now(),
+      );
+
+      final stepPast = TrajectoryStep(
+        stepId: 'step-past',
+        type: StepType.toolCall,
+        toolName: 'run_command',
+        summary: '過去步驟',
+        status: StepStatus.waitingUserInteraction,
+        interaction: UserInteractionRequest(
+          interactionId: 'req-past-step',
+          type: UserInteractionType.askPermission,
+          title: '過去步驟',
+          description: '過去步驟描述',
+          actionTarget: 'cat file.txt',
+          requestedAt: DateTime.now(),
+        ),
+        timestamp: DateTime.now(),
+      );
+
+      notifier.state = notifier.state.copyWith(
+        messages: [
+          CascadeMessage(
+            id: 'msg-different-req',
+            cascadeId: 'cascade-1',
+            role: MessageRole.assistant,
+            content: '',
+            trajectorySteps: [stepPast],
+            timestamp: DateTime.now(),
+          ),
+        ],
+        pendingInteraction: currentPending,
+      );
+
+      // 審批過去的步驟 'req-past-step'
+      await notifier.handleApproval(
+        interactionId: 'req-past-step',
+        approved: true,
+      );
+
+      // 斷言：當前的 'req-active-now' 絕不會被誤清！
+      final state = container.read(cascadeProvider);
+      expect(state.pendingInteraction?.interactionId, 'req-active-now');
     });
   });
 

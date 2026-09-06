@@ -64,6 +64,7 @@ class DeviceNotifier extends Notifier<DeviceState> {
   StreamSubscription? _transportSub;
   StreamSubscription? _latencySub;
   RemoteControlService? _remoteControlService;
+  Timer? _demoTimer;
 
   RemoteControlService get remoteControlService =>
       _remoteControlService ??= RemoteControlService(
@@ -76,6 +77,7 @@ class DeviceNotifier extends Notifier<DeviceState> {
     final storage = ref.watch(storageServiceProvider);
 
     ref.onDispose(() {
+      _demoTimer?.cancel();
       _transportSub?.cancel();
       _latencySub?.cancel();
       _transportManager?.dispose();
@@ -159,21 +161,46 @@ class DeviceNotifier extends Notifier<DeviceState> {
     );
 
     final updated = [newDevice, ...state.devices.where((d) => d.instanceId != instanceId)];
+
+    if (state.isDemoMode) {
+      _demoTimer?.cancel();
+      _demoTimer = null;
+      _transportSub?.cancel();
+      _transportSub = null;
+      _latencySub?.cancel();
+      _latencySub = null;
+      await _transportManager?.dispose();
+      _transportManager = null;
+      _remoteControlService?.updateConfiguration(
+        isDemoMode: true,
+        transportManager: null,
+      );
+      state = state.copyWith(
+        devices: updated,
+        activeDevice: newDevice,
+        isConnecting: false,
+        activeTransport: newDevice.transport,
+        currentLatencyMs: newDevice.latencyMs ?? 14,
+      );
+      await _storageService?.saveInstance(newDevice);
+      return;
+    }
+
     state = state.copyWith(
       devices: updated,
-      activeDevice: newDevice,
     );
     await _storageService?.saveInstance(newDevice);
 
-    if (!state.isDemoMode) {
-      await connectToDevice(newDevice);
-    }
+    await connectToDevice(newDevice);
   }
 
   int _connectionEpoch = 0;
 
   Future<void> connectToDevice(InstanceInfo device) async {
     final epoch = ++_connectionEpoch;
+
+    _demoTimer?.cancel();
+    _demoTimer = null;
 
     // 立即取消既有訂閱與釋放舊連線，杜絕舊連線殘留與控制目標不一致 (P0 #1)
     _transportSub?.cancel();
@@ -195,22 +222,27 @@ class DeviceNotifier extends Notifier<DeviceState> {
     );
 
     if (state.isDemoMode) {
-      await Future.delayed(const Duration(milliseconds: 600));
-      if (_connectionEpoch != epoch) return;
+      final completer = Completer<void>();
+      _demoTimer = Timer(const Duration(milliseconds: 300), () {
+        if (_connectionEpoch == epoch) {
+          _remoteControlService?.updateConfiguration(
+            isDemoMode: true,
+            transportManager: null,
+          );
 
-      _remoteControlService?.updateConfiguration(
-        isDemoMode: true,
-        transportManager: null,
-      );
-
-      state = state.copyWith(
-        isConnecting: false,
-        activeTransport: device.transport,
-        currentLatencyMs: device.latencyMs ?? 14,
-      );
+          state = state.copyWith(
+            isConnecting: false,
+            activeTransport: device.transport,
+            currentLatencyMs: device.latencyMs ?? 14,
+          );
+        }
+        if (!completer.isCompleted) completer.complete();
+      });
+      await completer.future;
       return;
     }
 
+    DualTransportManager? newManager;
     try {
       final token = state.accessToken ?? '';
       final relayClient = CloudRelayClient(
@@ -225,10 +257,18 @@ class DeviceNotifier extends Notifier<DeviceState> {
         targetInstanceUuid: device.uuid.isNotEmpty ? device.uuid : device.instanceId,
       );
 
-      final newManager = DualTransportManager(
+      final factory = ref.read(transportManagerFactoryProvider);
+      newManager = factory(
         relayClient: relayClient,
         meshClient: meshClient,
       );
+
+      if (_connectionEpoch != epoch) {
+        await newManager.dispose();
+        return;
+      }
+
+      await newManager.connectAll();
 
       if (_connectionEpoch != epoch) {
         await newManager.dispose();
@@ -249,13 +289,6 @@ class DeviceNotifier extends Notifier<DeviceState> {
         }
       });
 
-      await newManager.connectAll();
-
-      if (_connectionEpoch != epoch) {
-        await newManager.dispose();
-        return;
-      }
-
       _remoteControlService?.updateConfiguration(
         isDemoMode: state.isDemoMode,
         transportManager: newManager,
@@ -267,9 +300,20 @@ class DeviceNotifier extends Notifier<DeviceState> {
         currentLatencyMs: newManager.currentLatencyMs,
       );
     } catch (e) {
+      await newManager?.dispose();
       if (_connectionEpoch == epoch) {
+        _transportSub?.cancel();
+        _transportSub = null;
+        _latencySub?.cancel();
+        _latencySub = null;
+        _transportManager = null;
+        _remoteControlService?.updateConfiguration(
+          isDemoMode: state.isDemoMode,
+          transportManager: null,
+        );
         state = state.copyWith(
           isConnecting: false,
+          activeTransport: TransportType.offline,
           connectionError: e.toString(),
         );
       }
@@ -322,6 +366,18 @@ final storageServiceProvider = Provider<StorageService?>((ref) => null);
 
 final remoteControlServiceProvider = Provider<RemoteControlService>((ref) {
   return ref.watch(deviceProvider.notifier).remoteControlService;
+});
+
+typedef TransportManagerFactory = DualTransportManager Function({
+  required CloudRelayClient relayClient,
+  required WebRtcMeshClient meshClient,
+});
+
+final transportManagerFactoryProvider = Provider<TransportManagerFactory>((ref) {
+  return ({required relayClient, required meshClient}) => DualTransportManager(
+        relayClient: relayClient,
+        meshClient: meshClient,
+      );
 });
 
 final deviceProvider = NotifierProvider<DeviceNotifier, DeviceState>(DeviceNotifier.new);

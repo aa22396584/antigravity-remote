@@ -113,6 +113,11 @@ class CloudRelayClient implements TransportClient {
 
     if (resp.statusCode == 200) {
       final json = jsonDecode(resp.body) as Map<String, dynamic>;
+      if (json['error'] != null || json['is_error'] == true) {
+        throw RpcException(
+          json['error']?.toString() ?? json['message']?.toString() ?? 'Cloud Relay RPC error',
+        );
+      }
       final base64Payload = json['payload'] as String?;
       if (base64Payload != null) {
         return base64Decode(base64Payload);
