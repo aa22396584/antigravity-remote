@@ -64,6 +64,16 @@ class DiagnosticService {
       RegExp(r'''(["']?authorization["']?\s*:\s*["'])([^"'\r\n]+)(["'])''', caseSensitive: false),
       (m) => '${m.group(1)}[REDACTED]${m.group(3)}',
     );
+    // 遮蔽 Cookie 敏感資訊 (Issue #32)
+    result = result.replaceAllMapped(
+      RegExp(r'''(["']?cookie["']?\s*:\s*["'])([^"'\r\n]+)(["'])''', caseSensitive: false),
+      (m) => '${m.group(1)}[REDACTED_COOKIE]${m.group(3)}',
+    );
+    // 遮蔽 Password 敏感資訊
+    result = result.replaceAllMapped(
+      RegExp(r'''(["']?password["']?\s*:\s*["'])([^"'\r\n]+)(["'])''', caseSensitive: false),
+      (m) => '${m.group(1)}[REDACTED_PASSWORD]${m.group(3)}',
+    );
     // 遮蔽 private key 特徵
     result = result.replaceAllMapped(
       RegExp(r'-----BEGIN [A-Z ]+ PRIVATE KEY-----[^-]+-----END [A-Z ]+ PRIVATE KEY-----'),

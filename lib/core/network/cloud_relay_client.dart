@@ -71,8 +71,7 @@ class CloudRelayClient implements TransportClient {
       ).timeout(const Duration(seconds: 5));
 
       sw.stop();
-      if (resp.statusCode == 200 || resp.statusCode == 401) {
-        // Even 401 proves network reachability and latency
+      if (resp.statusCode == 200) {
         _lastLatencyMs = sw.elapsedMilliseconds;
         _latencyController.add(_lastLatencyMs!);
         return _lastLatencyMs;

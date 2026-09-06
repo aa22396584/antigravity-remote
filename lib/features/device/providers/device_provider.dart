@@ -20,6 +20,7 @@ class DeviceState {
   final bool isDemoMode;
   final TransportType activeTransport;
   final int? currentLatencyMs;
+  final BootState bootState;
 
   const DeviceState({
     this.devices = const [],
@@ -31,6 +32,7 @@ class DeviceState {
     this.isDemoMode = true,
     this.activeTransport = TransportType.p2p,
     this.currentLatencyMs,
+    this.bootState = BootState.ready,
   });
 
   DeviceState copyWith({
@@ -42,10 +44,12 @@ class DeviceState {
     bool clearError = false,
     CloudEnvironment? environment,
     String? accessToken,
+    bool clearAccessToken = false,
     bool? isDemoMode,
     TransportType? activeTransport,
     int? currentLatencyMs,
     bool clearLatency = false,
+    BootState? bootState,
   }) {
     return DeviceState(
       devices: devices ?? this.devices,
@@ -53,10 +57,11 @@ class DeviceState {
       isConnecting: isConnecting ?? this.isConnecting,
       connectionError: clearError ? null : (connectionError ?? this.connectionError),
       environment: environment ?? this.environment,
-      accessToken: accessToken ?? this.accessToken,
+      accessToken: clearAccessToken ? null : (accessToken ?? this.accessToken),
       isDemoMode: isDemoMode ?? this.isDemoMode,
       activeTransport: activeTransport ?? this.activeTransport,
       currentLatencyMs: clearLatency ? null : (currentLatencyMs ?? this.currentLatencyMs),
+      bootState: bootState ?? this.bootState,
     );
   }
 }
@@ -77,6 +82,7 @@ class DeviceNotifier extends Notifier<DeviceState> {
   @override
   DeviceState build() {
     final storage = ref.watch(storageServiceProvider);
+    final bootState = storage?.bootState ?? StorageService.lastBootState;
 
     ref.onDispose(() {
       _demoTimer?.cancel();
@@ -107,6 +113,7 @@ class DeviceNotifier extends Notifier<DeviceState> {
         isDemoMode: isDemo,
         activeTransport: defaultDev?.transport ?? TransportType.offline,
         currentLatencyMs: defaultDev?.latencyMs,
+        bootState: bootState,
       );
     } else {
       final list = MockAntigravityService.instance.getMockInstances();
@@ -114,6 +121,7 @@ class DeviceNotifier extends Notifier<DeviceState> {
         devices: list,
         activeDevice: list.first,
         isDemoMode: true,
+        bootState: BootState.ready,
       );
     }
   }
@@ -138,17 +146,48 @@ class DeviceNotifier extends Notifier<DeviceState> {
     );
   }
 
-  void setEnvironment(CloudEnvironment env) {
+  Future<void> setEnvironment(CloudEnvironment env) async {
     state = state.copyWith(environment: env);
-    _storageService?.setEnvironment(env);
+    await _storageService?.setEnvironment(env);
+    if (state.activeDevice != null && !state.isDemoMode) {
+      await connectToDevice(state.activeDevice!);
+    }
   }
 
-  void setAccessToken(String token) {
-    state = state.copyWith(accessToken: token);
-    _storageService?.setAccessToken(token);
+  Future<void> setAccessToken(String token) async {
+    state = state.copyWith(
+      accessToken: token,
+      clearAccessToken: token.isEmpty,
+    );
+    await _storageService?.setAccessToken(token);
+    if (state.activeDevice != null && !state.isDemoMode) {
+      await connectToDevice(state.activeDevice!);
+    }
   }
 
-  Future<void> addDevice({
+  /// 登出並清除平台安全憑證 (Issue #14, #15)
+  Future<void> logout() async {
+    _transportSub?.cancel();
+    _transportSub = null;
+    _latencySub?.cancel();
+    _latencySub = null;
+    await _transportManager?.dispose();
+    _transportManager = null;
+    _remoteControlService?.updateConfiguration(
+      isDemoMode: state.isDemoMode,
+      transportManager: null,
+    );
+
+    state = state.copyWith(
+      clearAccessToken: true,
+      activeTransport: TransportType.offline,
+      clearLatency: true,
+    );
+
+    await _storageService?.clearAccessToken();
+  }
+
+  Future<bool> addDevice({
     required String instanceId,
     String? name,
     String? hostname,
@@ -161,7 +200,7 @@ class DeviceNotifier extends Notifier<DeviceState> {
       name: devName,
       status: state.isDemoMode
           ? InstanceConnectionStatus.connected
-          : InstanceConnectionStatus.connecting,
+          : InstanceConnectionStatus.unverified,
       transport: state.isDemoMode ? TransportType.p2p : TransportType.offline,
       latencyMs: state.isDemoMode ? 16 : null,
       lastSeen: DateTime.now(),
@@ -191,7 +230,7 @@ class DeviceNotifier extends Notifier<DeviceState> {
         currentLatencyMs: newDevice.latencyMs,
       );
       await _storageService?.saveInstance(newDevice);
-      return;
+      return true;
     }
 
     state = state.copyWith(
@@ -199,12 +238,12 @@ class DeviceNotifier extends Notifier<DeviceState> {
     );
     await _storageService?.saveInstance(newDevice);
 
-    await connectToDevice(newDevice);
+    return await connectToDevice(newDevice);
   }
 
   int _connectionEpoch = 0;
 
-  Future<void> connectToDevice(InstanceInfo device) async {
+  Future<bool> connectToDevice(InstanceInfo device) async {
     final epoch = ++_connectionEpoch;
 
     _demoTimer?.cancel();
@@ -247,7 +286,7 @@ class DeviceNotifier extends Notifier<DeviceState> {
         if (!completer.isCompleted) completer.complete();
       });
       await completer.future;
-      return;
+      return true;
     }
 
     DualTransportManager? newManager;
@@ -273,14 +312,14 @@ class DeviceNotifier extends Notifier<DeviceState> {
 
       if (_connectionEpoch != epoch) {
         await newManager.dispose();
-        return;
+        return false;
       }
 
       await newManager.connectAll();
 
       if (_connectionEpoch != epoch) {
         await newManager.dispose();
-        return;
+        return false;
       }
 
       _transportManager = newManager;
@@ -302,11 +341,22 @@ class DeviceNotifier extends Notifier<DeviceState> {
         transportManager: newManager,
       );
 
+      final connectedDev = device.copyWith(
+        status: InstanceConnectionStatus.connected,
+        transport: newManager.currentTransport,
+        latencyMs: newManager.currentLatencyMs,
+      );
+      final newDevices = state.devices.map((d) => d.instanceId == device.instanceId ? connectedDev : d).toList();
+
       state = state.copyWith(
+        devices: newDevices,
+        activeDevice: connectedDev,
         isConnecting: false,
         activeTransport: newManager.currentTransport,
         currentLatencyMs: newManager.currentLatencyMs,
       );
+      await _storageService?.saveInstance(connectedDev);
+      return true;
     } catch (e) {
       await newManager?.dispose();
       if (_connectionEpoch == epoch) {
@@ -319,12 +369,24 @@ class DeviceNotifier extends Notifier<DeviceState> {
           isDemoMode: state.isDemoMode,
           transportManager: null,
         );
+
+        final disconnectedDev = device.copyWith(
+          status: InstanceConnectionStatus.disconnected,
+          transport: TransportType.offline,
+        );
+        final newDevices = state.devices.map((d) => d.instanceId == device.instanceId ? disconnectedDev : d).toList();
+
         state = state.copyWith(
+          devices: newDevices,
+          activeDevice: disconnectedDev,
           isConnecting: false,
           activeTransport: TransportType.offline,
+          clearLatency: true,
           connectionError: e.toString(),
         );
+        await _storageService?.saveInstance(disconnectedDev);
       }
+      return false;
     }
   }
 

@@ -118,6 +118,7 @@ class WebRtcMeshClient implements TransportClient {
   bool _isChannelAuthenticated = false;
   ChannelAuthState _authState = ChannelAuthState.unauthenticated;
   int? _lastLatencyMs;
+  DateTime? _challengeSentTime;
   final _latencyController = StreamController<int>.broadcast();
   final _connectionStatusController = StreamController<bool>.broadcast();
 
@@ -359,11 +360,14 @@ class WebRtcMeshClient implements TransportClient {
                     challengeJson['authenticated'] == true)) {
               _authState = ChannelAuthState.authenticated;
               _isChannelAuthenticated = true;
-              _lastLatencyMs = 12; // Initial P2P estimate
+              final rtt = _challengeSentTime != null
+                  ? DateTime.now().difference(_challengeSentTime!).inMilliseconds
+                  : null;
+              _lastLatencyMs = (rtt != null && rtt > 0) ? rtt : null;
               if (!_connectionStatusController.isClosed) {
                 _connectionStatusController.add(true);
               }
-              if (!_latencyController.isClosed) {
+              if (_lastLatencyMs != null && !_latencyController.isClosed) {
                 _latencyController.add(_lastLatencyMs!);
               }
               return;
@@ -466,6 +470,7 @@ class WebRtcMeshClient implements TransportClient {
   Future<void> _respondToChannelBindingChallenge(String nonce) async {
     if (_cryptoService == null || _dataChannel == null) return;
 
+    _challengeSentTime = DateTime.now();
     final signatureBase64 = _cryptoService!.signBase64(nonce);
 
     final responsePayload = jsonEncode({

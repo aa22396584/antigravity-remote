@@ -79,10 +79,15 @@ class StorageService {
 
   static BootState lastBootState = BootState.ready;
 
-  final SharedPreferences _prefs;
+  final SharedPreferences? _prefs;
+  final Map<String, dynamic> _inMemoryMap = {};
   final BootState bootState;
 
   StorageService(this._prefs, {this.bootState = BootState.ready});
+
+  factory StorageService.inMemory({BootState bootState = BootState.degraded}) {
+    return StorageService(null, bootState: bootState);
+  }
 
   static Future<StorageService> init() async {
     try {
@@ -91,12 +96,14 @@ class StorageService {
       return StorageService(prefs, bootState: BootState.ready);
     } catch (_) {
       lastBootState = BootState.degraded;
-      rethrow;
+      return StorageService.inMemory(bootState: BootState.degraded);
     }
   }
 
   Future<String> _getOrCreateSaltAsync() async {
-    var salt = _prefs.getString(_keyTokenSalt);
+    var salt = _prefs != null
+        ? _prefs.getString(_keyTokenSalt)
+        : (_inMemoryMap[_keyTokenSalt] as String?);
     if (salt == null || salt.isEmpty) {
       final rand = Random.secure();
       final bytes = Uint8List(16);
@@ -104,13 +111,18 @@ class StorageService {
         bytes[i] = rand.nextInt(256);
       }
       salt = base64Url.encode(bytes);
-      await _prefs.setString(_keyTokenSalt, salt);
+      if (_prefs != null) {
+        await _prefs.setString(_keyTokenSalt, salt);
+      }
+      _inMemoryMap[_keyTokenSalt] = salt;
     }
     return salt;
   }
 
   String _getOrCreateSalt() {
-    var salt = _prefs.getString(_keyTokenSalt);
+    var salt = _prefs != null
+        ? _prefs.getString(_keyTokenSalt)
+        : (_inMemoryMap[_keyTokenSalt] as String?);
     if (salt == null || salt.isEmpty) {
       final rand = Random.secure();
       final bytes = Uint8List(16);
@@ -118,7 +130,10 @@ class StorageService {
         bytes[i] = rand.nextInt(256);
       }
       salt = base64Url.encode(bytes);
-      _prefs.setString(_keyTokenSalt, salt);
+      if (_prefs != null) {
+        _prefs.setString(_keyTokenSalt, salt);
+      }
+      _inMemoryMap[_keyTokenSalt] = salt;
     }
     return salt;
   }
@@ -127,7 +142,9 @@ class StorageService {
 
   // Google OAuth / Bearer Token (AES-256-GCM 加密保護，避免明文落盤)
   String? getAccessToken() {
-    final raw = _prefs.getString(_keyAccessToken);
+    final raw = _prefs != null
+        ? _prefs.getString(_keyAccessToken)
+        : (_inMemoryMap[_keyAccessToken] as String?);
     if (raw == null || raw.isEmpty) return null;
     return _TokenVaultCrypto.decrypt(raw, _vaultKey);
   }
@@ -140,30 +157,57 @@ class StorageService {
     final salt = await _getOrCreateSaltAsync();
     final key = _TokenVaultCrypto.deriveKey(salt);
     final encrypted = _TokenVaultCrypto.encrypt(token, key);
-    await _prefs.setString(_keyAccessToken, encrypted);
+    if (_prefs != null) {
+      await _prefs.setString(_keyAccessToken, encrypted);
+    }
+    _inMemoryMap[_keyAccessToken] = encrypted;
   }
 
-  Future<void> clearAccessToken() => _prefs.remove(_keyAccessToken);
+  Future<void> clearAccessToken() async {
+    if (_prefs != null) {
+      await _prefs.remove(_keyAccessToken);
+    }
+    _inMemoryMap.remove(_keyAccessToken);
+  }
 
   // Cloud Endpoint Environment
   CloudEnvironment getEnvironment() {
-    final raw = _prefs.getString(_keyEnvironment);
+    final raw = _prefs != null
+        ? _prefs.getString(_keyEnvironment)
+        : (_inMemoryMap[_keyEnvironment] as String?);
     return CloudEnvironment.values.firstWhere(
       (e) => e.name == raw,
       orElse: () => CloudEnvironment.production,
     );
   }
 
-  Future<void> setEnvironment(CloudEnvironment env) =>
-      _prefs.setString(_keyEnvironment, env.name);
+  Future<void> setEnvironment(CloudEnvironment env) async {
+    if (_prefs != null) {
+      await _prefs.setString(_keyEnvironment, env.name);
+    }
+    _inMemoryMap[_keyEnvironment] = env.name;
+  }
 
   // Demo Mode
-  bool isDemoMode() => _prefs.getBool(_keyDemoMode) ?? true;
-  Future<void> setDemoMode(bool enabled) => _prefs.setBool(_keyDemoMode, enabled);
+  bool isDemoMode() {
+    if (_prefs != null) {
+      return _prefs.getBool(_keyDemoMode) ?? true;
+    }
+    return (_inMemoryMap[_keyDemoMode] as bool?) ?? false;
+  }
+
+  Future<void> setDemoMode(bool enabled) async {
+    if (_prefs != null) {
+      await _prefs.setBool(_keyDemoMode, enabled);
+    }
+    _inMemoryMap[_keyDemoMode] = enabled;
+  }
 
   // Paired Devices List
   List<InstanceInfo> getSavedInstances() {
-    final rawList = _prefs.getStringList(_keyInstances);
+    final rawList = _prefs != null
+        ? _prefs.getStringList(_keyInstances)
+        : (_inMemoryMap[_keyInstances] as List<String>?);
     if (rawList == null) return [];
 
     return rawList
@@ -188,13 +232,19 @@ class StorageService {
     }
 
     final encoded = list.map((e) => jsonEncode(e.toJson())).toList();
-    await _prefs.setStringList(_keyInstances, encoded);
+    if (_prefs != null) {
+      await _prefs.setStringList(_keyInstances, encoded);
+    }
+    _inMemoryMap[_keyInstances] = encoded;
   }
 
   Future<void> removeInstance(String instanceId) async {
     final list = getSavedInstances();
     list.removeWhere((e) => e.instanceId == instanceId);
     final encoded = list.map((e) => jsonEncode(e.toJson())).toList();
-    await _prefs.setStringList(_keyInstances, encoded);
+    if (_prefs != null) {
+      await _prefs.setStringList(_keyInstances, encoded);
+    }
+    _inMemoryMap[_keyInstances] = encoded;
   }
 }

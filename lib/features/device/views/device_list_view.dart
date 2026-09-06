@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/qr_parser_service.dart';
+import '../../../core/services/storage_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/cyber_button.dart';
 import '../../../shared/widgets/cyber_card.dart';
@@ -56,6 +57,29 @@ class DeviceListView extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // Storage Degraded Banner (Issue #32)
+          if (deviceState.bootState == BootState.degraded)
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: CyberColors.amber.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: CyberColors.amber.withOpacity(0.4)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded, color: CyberColors.amber, size: 18),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      '儲存系統降級：安全憑證儲存初始化失敗，目前以記憶體隔離模式運行，關閉應用後設定將不會保留。',
+                      style: TextStyle(fontSize: 12.5, color: CyberColors.amber, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           // Demo Mode Banner (Issue #6)
           if (deviceState.isDemoMode)
             Container(
@@ -274,7 +298,7 @@ class DeviceListView extends ConsumerWidget {
     ParsedRemoteTarget result,
   ) async {
     final deviceNotifier = ref.read(deviceProvider.notifier);
-    await deviceNotifier.addDevice(
+    final success = await deviceNotifier.addDevice(
       instanceId: result.instanceId,
       name: result.email != null ? 'Antigravity (${result.email})' : null,
       hostname: result.hostname,
@@ -286,26 +310,48 @@ class DeviceListView extends ConsumerWidget {
       final shortId = result.instanceId.length > 12
           ? '${result.instanceId.substring(0, 12)}...'
           : result.instanceId;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle, color: CyberColors.emerald, size: 20),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text('成功配對並切換設備: $shortId'),
-              ),
-            ],
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: CyberColors.emerald, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text('成功配對並切換設備: $shortId'),
+                ),
+              ],
+            ),
+            backgroundColor: CyberColors.surfaceElevated,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+              side: const BorderSide(color: CyberColors.emerald),
+            ),
           ),
-          backgroundColor: CyberColors.surfaceElevated,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-            side: const BorderSide(color: CyberColors.emerald),
+        );
+        onOpenChat();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.warning_amber_rounded, color: CyberColors.amber, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text('已儲存配對書籤，但連線失敗: $shortId'),
+                ),
+              ],
+            ),
+            backgroundColor: CyberColors.surfaceElevated,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+              side: const BorderSide(color: CyberColors.amber),
+            ),
           ),
-        ),
-      );
-      onOpenChat();
+        );
+      }
     }
   }
 }

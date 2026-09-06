@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/endpoints.dart';
+import '../../../core/services/storage_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/cyber_button.dart';
 import '../../../shared/widgets/cyber_card.dart';
@@ -15,6 +16,7 @@ class ConnectionSettingsView extends ConsumerStatefulWidget {
 
 class _ConnectionSettingsViewState extends ConsumerState<ConnectionSettingsView> {
   late TextEditingController _tokenController;
+  late String _tokenDraft;
   bool _obscureToken = true;
 
   @override
@@ -22,6 +24,7 @@ class _ConnectionSettingsViewState extends ConsumerState<ConnectionSettingsView>
     super.initState();
     final currentToken = ref.read(deviceProvider).accessToken ?? '';
     _tokenController = TextEditingController(text: currentToken);
+    _tokenDraft = currentToken;
   }
 
   @override
@@ -42,6 +45,29 @@ class _ConnectionSettingsViewState extends ConsumerState<ConnectionSettingsView>
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // Storage Degraded Banner (Issue #32)
+          if (deviceState.bootState == BootState.degraded)
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: CyberColors.amber.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: CyberColors.amber.withOpacity(0.4)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded, color: CyberColors.amber, size: 18),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      '儲存系統降級：安全憑證儲存初始化失敗，目前以記憶體模式運行，設定將不會持久化保存。',
+                      style: TextStyle(fontSize: 12.5, color: CyberColors.amber, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           // 1. Demo Mode Switch
           CyberCard(
             borderColor: deviceState.isDemoMode ? CyberColors.emerald : CyberColors.subtleBorder,
@@ -208,6 +234,7 @@ class _ConnectionSettingsViewState extends ConsumerState<ConnectionSettingsView>
                 TextField(
                   controller: _tokenController,
                   obscureText: _obscureToken,
+                  maxLines: 1,
                   enableSuggestions: false,
                   autocorrect: false,
                   style: AppTheme.codeFont(color: CyberColors.textCode, fontSize: 12),
@@ -223,20 +250,61 @@ class _ConnectionSettingsViewState extends ConsumerState<ConnectionSettingsView>
                       tooltip: _obscureToken ? '顯示憑證' : '隱藏憑證',
                     ),
                   ),
-                  onChanged: (val) => deviceNotifier.setAccessToken(val.trim()),
+                  onChanged: (val) => setState(() => _tokenDraft = val.trim()),
                 ),
-                const SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.end,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
+                    if (deviceState.accessToken != null && deviceState.accessToken!.isNotEmpty)
+                      CyberButton(
+                        text: '清除憑證 / 登出',
+                        isOutlined: true,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        onPressed: () async {
+                          await deviceNotifier.logout();
+                          _tokenController.clear();
+                          setState(() => _tokenDraft = '');
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('已清除憑證並中斷連線'),
+                                backgroundColor: CyberColors.surfaceElevated,
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    if (deviceState.isDemoMode)
+                      CyberButton(
+                        text: '生成測試 Token',
+                        isOutlined: true,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        onPressed: () {
+                          final mockToken = 'mock-oauth-ya29.${DateTime.now().millisecondsSinceEpoch}';
+                          _tokenController.text = mockToken;
+                          setState(() => _tokenDraft = mockToken);
+                          deviceNotifier.setAccessToken(mockToken);
+                        },
+                      ),
                     CyberButton(
-                      text: '生成測試 Token',
-                      isOutlined: true,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      onPressed: () {
-                        final mockToken = 'mock-oauth-ya29.${DateTime.now().millisecondsSinceEpoch}';
-                        _tokenController.text = mockToken;
-                        deviceNotifier.setAccessToken(mockToken);
+                      text: '儲存 Token',
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      onPressed: () async {
+                        await deviceNotifier.setAccessToken(_tokenDraft);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('已安全儲存 OAuth Access Token'),
+                              backgroundColor: CyberColors.surfaceElevated,
+                            ),
+                          );
+                        }
                       },
                     ),
                   ],

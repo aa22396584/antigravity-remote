@@ -62,12 +62,26 @@ class TerminalNotifier extends Notifier<TerminalState> {
       }
     });
 
+    final deviceState = ref.read(deviceProvider);
+    final activeDevice = deviceState.activeDevice;
+
+    String initialBanner;
+    if (deviceState.isDemoMode) {
+      initialBanner = 'Antigravity Remote Terminal Bridge [Demo Mode]\n'
+          '離線展示模式：模擬終端環境已就緒。\n\n';
+    } else if (activeDevice == null) {
+      initialBanner = 'Antigravity Remote Terminal Bridge\n'
+          '目前未連線至任何遠端實體。請至控制台選取或配對裝置。\n\n';
+    } else {
+      initialBanner = 'Antigravity Remote Terminal Bridge\n'
+          '連線目標: ${activeDevice.name} (${activeDevice.instanceId})\n'
+          '傳輸通道: ${deviceState.activeTransport.name.toUpperCase()}\n\n';
+    }
+
     return TerminalState(
       chunks: [
         TerminalChunk(
-          text: 'Antigravity Remote Terminal Bridge v2.12.2 [Darwin arm64]\n'
-              'Connected via TransportMultiplexer -> LanguageServerService (ConnectRPC)\n'
-              'Ready for remote command execution and live monitoring.\n\n',
+          text: initialBanner,
           timestamp: DateTime.now(),
         ),
       ],

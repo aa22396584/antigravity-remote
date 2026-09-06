@@ -27,11 +27,27 @@ void main() {
       expect(find.text('Google OAuth2 Access Token (Bearer)'), findsOneWidget);
       expect(find.text('雙軌傳輸規格說明 (Dual-Transport Architecture)'), findsOneWidget);
 
-      // Verify Demo mode switch exists and can be tapped
+      // Verify Generate Test Token button exists in Demo mode
+      expect(find.text('生成測試 Token'), findsOneWidget);
+      expect(find.text('儲存 Token'), findsOneWidget);
+
+      await tester.tap(find.text('生成測試 Token'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('mock-oauth-ya29'), findsOneWidget);
+
+      // Save token draft
+      await tester.tap(find.text('儲存 Token'));
+      await tester.pumpAndSettle();
+      expect(find.text('已安全儲存 OAuth Access Token'), findsOneWidget);
+
+      // Verify Demo mode switch exists and toggle to Live Mode
       final switchFinder = find.byType(Switch);
       expect(switchFinder, findsOneWidget);
       await tester.tap(switchFinder);
       await tester.pumpAndSettle();
+
+      // In Live mode, '生成測試 Token' must be hidden (Issue #14)
+      expect(find.text('生成測試 Token'), findsNothing);
 
       // Verify Environment options can be tapped
       expect(find.text('正式環境 (Production)'), findsOneWidget);
@@ -40,12 +56,11 @@ void main() {
       await tester.tap(find.text('測試環境 (Daily / Staging)'));
       await tester.pump(const Duration(milliseconds: 300));
 
-      // Verify Generate Test Token button
-      expect(find.text('生成測試 Token'), findsOneWidget);
-      await tester.tap(find.text('生成測試 Token'));
+      // Verify clear credentials button works
+      expect(find.text('清除憑證 / 登出'), findsOneWidget);
+      await tester.tap(find.text('清除憑證 / 登出'));
       await tester.pumpAndSettle();
-
-      expect(find.textContaining('mock-oauth-ya29'), findsOneWidget);
+      expect(find.text('已清除憑證並中斷連線'), findsOneWidget);
     });
   });
 }

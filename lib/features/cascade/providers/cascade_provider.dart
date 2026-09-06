@@ -66,22 +66,50 @@ class CascadeNotifier extends Notifier<CascadeState> {
       }
     });
 
-    final welcomeMsg = CascadeMessage(
-      id: 'msg-welcome',
-      cascadeId: 'cascade-main',
-      role: MessageRole.assistant,
-      content: '### 🚀 Antigravity 遠端控制中樞已就緒\n\n'
-          '已自動建立安全連線通道。您可以在此：\n'
-          '- 即時監控本機 Agent 執行進度與內部思考思維\n'
-          '- 審批與核准終端指令執行（`run_command`）與檔案編輯\n'
-          '- 直接在手機/平板發送 Prompt 引導桌面端編程',
-      thinking: '正在連線至本機 LanguageServer (ConnectRPC)...\n'
-          '雙軌傳輸通道已就緒 (WebRTC P2P Mesh <20ms / Cloud Relay 備援)。\n'
-          'NIST P-256 安全挑戰已通過驗證，進入遠端調度狀態。',
-      thinkingDuration: const Duration(seconds: 1, milliseconds: 240),
-      isThinking: false,
-      timestamp: DateTime.now().subtract(const Duration(minutes: 1)),
-    );
+    final deviceState = ref.read(deviceProvider);
+    final activeDevice = deviceState.activeDevice;
+
+    CascadeMessage welcomeMsg;
+    if (deviceState.isDemoMode) {
+      welcomeMsg = CascadeMessage(
+        id: 'msg-welcome',
+        cascadeId: 'cascade-main',
+        role: MessageRole.assistant,
+        content: '### 🧪 Antigravity 遠端控制中樞已就緒 (展示模式 Demo Mode)\n\n'
+            '目前處於離線展示環境，所有操作皆為本機模擬，不會向真實遠端電腦發送指令。\n'
+            '您可在此體驗完整 Prompt 思考、指令審批與虛擬終端互動。',
+        thinking: '展示環境已就緒。\n模擬本機 Agent 連線與審批互動。',
+        thinkingDuration: const Duration(seconds: 1, milliseconds: 200),
+        isThinking: false,
+        timestamp: DateTime.now().subtract(const Duration(minutes: 1)),
+      );
+    } else if (activeDevice == null) {
+      welcomeMsg = CascadeMessage(
+        id: 'msg-welcome',
+        cascadeId: 'cascade-main',
+        role: MessageRole.assistant,
+        content: '### 🚀 Antigravity 遠端控制中樞\n\n'
+            '尚未連線至遠端 Antigravity 實體。\n'
+            '請在「裝置列表」中配對或選取欲連線控制的電腦。',
+        thinking: '等待選擇遠端連線目標...',
+        isThinking: false,
+        timestamp: DateTime.now(),
+      );
+    } else {
+      final latText = deviceState.currentLatencyMs != null ? '${deviceState.currentLatencyMs}ms' : '—';
+      welcomeMsg = CascadeMessage(
+        id: 'msg-welcome',
+        cascadeId: 'cascade-main',
+        role: MessageRole.assistant,
+        content: '### 🚀 Antigravity 遠端控制中樞已就緒\n\n'
+            '連線目標實體 ID: `${activeDevice.instanceId}`\n'
+            '傳輸通道: ${deviceState.activeTransport.name.toUpperCase()} (實測延遲: $latText)\n\n'
+            '您可以在此監控 Agent 執行、核准終端指令與引導編程。',
+        thinking: '連線已就緒。\n目標實體: ${activeDevice.instanceId}\n等待指令輸入。',
+        isThinking: false,
+        timestamp: DateTime.now(),
+      );
+    }
 
     return CascadeState(messages: [welcomeMsg]);
   }
