@@ -48,3 +48,14 @@ class InFlightRpcException implements Exception {
   String toString() => 'InFlightRpcException on $rpcPath: $cause';
 }
 
+/// 協議解析失敗異常（收到畸形或無法識別的訊框，禁止將二進位/錯誤字元當作正常文字處理）
+class ProtocolException implements Exception {
+  final String message;
+  final Object? cause;
+
+  const ProtocolException(this.message, {this.cause});
+
+  @override
+  String toString() => 'ProtocolException: $message${cause != null ? ' (cause: $cause)' : ''}';
+}
+

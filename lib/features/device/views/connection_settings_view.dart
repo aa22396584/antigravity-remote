@@ -15,6 +15,7 @@ class ConnectionSettingsView extends ConsumerStatefulWidget {
 
 class _ConnectionSettingsViewState extends ConsumerState<ConnectionSettingsView> {
   late TextEditingController _tokenController;
+  bool _obscureToken = true;
 
   @override
   void initState() {
@@ -200,16 +201,27 @@ class _ConnectionSettingsViewState extends ConsumerState<ConnectionSettingsView>
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  '直接向 Google Cloud codecode-pa 閘道器認證。支援 Bearer Token 或 Google 登入憑證。',
+                  '向 Google Cloud 閘道器認證。支援 Bearer Token 或手動匯入憑證。',
                   style: TextStyle(fontSize: 12.5, color: CyberColors.textSecondary),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: _tokenController,
+                  obscureText: _obscureToken,
+                  enableSuggestions: false,
+                  autocorrect: false,
                   style: AppTheme.codeFont(color: CyberColors.textCode, fontSize: 12),
-                  maxLines: 2,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: 'ya29.a0AfH6SM...',
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscureToken ? Icons.visibility_off : Icons.visibility,
+                        color: CyberColors.textSecondary,
+                        size: 20,
+                      ),
+                      onPressed: () => setState(() => _obscureToken = !_obscureToken),
+                      tooltip: _obscureToken ? '顯示憑證' : '隱藏憑證',
+                    ),
                   ),
                   onChanged: (val) => deviceNotifier.setAccessToken(val.trim()),
                 ),
@@ -257,10 +269,69 @@ class _ConnectionSettingsViewState extends ConsumerState<ConnectionSettingsView>
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  '• 軌道 1 (Cloud Relay)：調用 ProxyCommand / StreamProxyCommand，由 Google Cloud 轉發至桌面端，100% 穿透任何防火牆。\n'
-                  '• 軌道 2 (WebRTC P2P DataChannel)：基於 InitiateMeshSession、STUN/TURN、ECDSA P-256 挑戰回應，端到端超低延遲 (<20ms)。\n'
+                  '• 軌道 1 (Cloud Relay)：調用 ProxyCommand / StreamProxyCommand，由 Google Cloud 轉發至桌面端，適用於各類 NAT 與跨網段環境。\n'
+                  '• 軌道 2 (WebRTC P2P DataChannel)：基於 InitiateMeshSession、STUN/TURN、ECDSA P-256 挑戰回應，直接建立端到端加密資料串流。\n'
                   '• 資料分幀：5 位元組長度前綴 [0x00][Length][Payload]。',
                   style: TextStyle(fontSize: 12.5, color: CyberColors.textSecondary, height: 1.5),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // 5. Diagnostics and Logs (Issue #32)
+          CyberCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.bug_report, size: 18, color: CyberColors.emerald),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '連線診斷與日誌 (Diagnostics)',
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w700,
+                          color: CyberColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  '匯出經安全去識別化與憑證遮蔽之連線診斷日誌，協助排除連線故障。',
+                  style: TextStyle(fontSize: 12.5, color: CyberColors.textSecondary),
+                ),
+                const SizedBox(height: 12),
+                CyberButton(
+                  text: '查看 / 複製診斷報告',
+                  isOutlined: true,
+                  icon: Icons.assignment_outlined,
+                  onPressed: () {
+                    final report = ref.read(deviceProvider.notifier).exportDiagnosticReport();
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        backgroundColor: CyberColors.surfaceElevated,
+                        title: const Text('安全診斷日誌 (已去識別化)'),
+                        content: SingleChildScrollView(
+                          child: SelectableText(
+                            report,
+                            style: AppTheme.codeFont(fontSize: 11, color: CyberColors.textCode),
+                          ),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(),
+                            child: const Text('關閉'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
               ],
             ),

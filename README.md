@@ -23,6 +23,8 @@
 <a name="-繁體中文說明"></a>
 ## 🇹🇼 繁體中文說明
 
+> ⚠️ **第三方專案聲明 / Disclaimer**：本專案為社群第三方開源客戶端，非 Google 官方產品。所有連線與遠端控制依賴使用者自行授權之憑證。已完成 2026-09 全面功能與協議安全稽核。各平台支援度請參閱 [平台能力矩陣](docs/platform_matrix.md) 與 [協議相容性規格](docs/protocol/compatibility.md)。
+
 **Antigravity Remote** 是一款專為 **Antigravity (Google Jetski)** 打造的現代化跨平台原生控制客戶端（支援 iOS、Android 與 macOS）。透過深度逆向工程解析 Antigravity 本機二進位執行檔（`language_server`）、Protobuf 通訊協議（`devtools_jetski_boq_api_proto.ApiService` 與 `LanguageServerService`）、ConnectRPC 及 WebRTC P2P DataChannel，實現隨時隨地遠端調度、監控思考過程與審批本機終端指令。
 
 ---
@@ -49,7 +51,7 @@
   └───────────────────┼──────────────────────────────────┼─────────────────┘
                       │                                  │
          軌道 1 (Cloud Relay 模式)           軌道 2 (WebRTC P2P DataChannel)
-         100% 穿透保底 / 無須公網 IP          極致低延遲 (<20ms) 直連通道
+         高穿透率 NAT 轉發 / 無須公網 IP      區域網路/P2P 直連通道
                       │                                  │
                       ▼                                  │
   ┌───────────────────────────────────────────────┐      │

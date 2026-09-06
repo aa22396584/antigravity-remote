@@ -148,5 +148,51 @@ void main() {
       expect(result, isNotNull);
       expect(result!.cascadeId, 'casc-123');
     });
+
+    test('single quote and bare punctuation do not crash with RangeError (Issue #16)', () {
+      expect(QrParserService.parse("'"), isNull);
+      expect(QrParserService.parse("''"), isNull);
+      expect(QrParserService.parse("'''"), isNull);
+      expect(QrParserService.parse('"'), isNull);
+      expect(QrParserService.parse('`'), isNull);
+      expect(QrParserService.parse('<'), isNull);
+      expect(QrParserService.parse('>'), isNull);
+    });
+
+    test('rejects lookalike domains and userinfo spoofing (Issue #16)', () {
+      // Lookalike domain suffix
+      expect(
+        QrParserService.parse('https://antigravity.google.com.evil-attacker.com/r/target-123'),
+        isNull,
+      );
+      // Userinfo spoofing
+      expect(
+        QrParserService.parse('https://antigravity.google.com@evil.com/r/target-123'),
+        isNull,
+      );
+      // Query injection without authentic domain
+      expect(
+        QrParserService.parse('https://evil.com/search?q=https://antigravity.google.com/r/target-123'),
+        isNull,
+      );
+    });
+
+    test('rejects JSON with non-string or malformed ID types (Issue #16)', () {
+      expect(QrParserService.parse('{"instanceId": true}'), isNull);
+      expect(QrParserService.parse('{"instanceId": [1, 2, 3]}'), isNull);
+      expect(QrParserService.parse('{"instanceId": {"nested": "val"}}'), isNull);
+    });
+
+    test('rejects inputs exceeding maximum size and bounded redirect recursion', () {
+      final hugeStr = 'a' * 5000;
+      expect(QrParserService.parse(hugeStr), isNull);
+
+      // Deep redirect chain > 3 levels
+      String deepUrl = 'https://antigravity.google.com/r/valid-id-123';
+      for (int i = 0; i < 5; i++) {
+        deepUrl = 'https://accounts.google.com/AccountChooser?continue=${Uri.encodeComponent(deepUrl)}';
+      }
+      expect(QrParserService.parse(deepUrl, depth: 4), isNull);
+    });
   });
 }

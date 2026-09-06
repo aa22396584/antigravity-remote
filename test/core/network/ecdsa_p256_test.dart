@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:antigravity_remote/core/network/ecdsa_p256_service.dart';
 
@@ -43,6 +44,52 @@ void main() {
       final sigBytes = base64Decode(sigB64);
       final isValid = crypto.verify(utf8.encode(challenge), sigBytes);
       expect(isValid, isTrue);
+    });
+
+    test('strict DER rejects trailing garbage bytes (Issue #30)', () {
+      final crypto = EcdsaP256Service.generate();
+      const msg = 'test-trailing-bytes';
+      final validDer = crypto.sign(utf8.encode(msg));
+
+      // Append trailing byte
+      final withTrailing = Uint8List.fromList([...validDer, 0x00]);
+      expect(crypto.verify(utf8.encode(msg), withTrailing), isFalse);
+      expect(DerSignature.tryParseDer(withTrailing), isNull);
+    });
+
+    test('strict DER rejects tampered sequence length (Issue #30)', () {
+      final crypto = EcdsaP256Service.generate();
+      const msg = 'test-seq-length';
+      final validDer = Uint8List.fromList(crypto.sign(utf8.encode(msg)));
+
+      // Modify sequence length to be smaller or larger
+      validDer[1] = validDer[1] + 1;
+      expect(crypto.verify(utf8.encode(msg), validDer), isFalse);
+      expect(DerSignature.tryParseDer(validDer), isNull);
+    });
+
+    test('strict DER rejects redundant leading zeros in integers (Issue #30)', () {
+      // Construct a signature with redundant 0x00 prefix: [0x30, ..., 0x02, len, 0x00, 0x00, ...]
+      final malformed = Uint8List.fromList([
+        0x30, 0x46,
+        0x02, 0x21, 0x00, 0x00, ...List.filled(31, 0x01), // Redundant 0x00
+        0x02, 0x20, ...List.filled(32, 0x02),
+      ]);
+      expect(DerSignature.tryParseDer(malformed), isNull);
+    });
+
+    test('bidirectional conversion between DER and IEEE P1363 64-byte raw format (Issue #30)', () {
+      final crypto = EcdsaP256Service.generate();
+      const msg = 'p1363-conversion-test';
+
+      final p1363 = crypto.signRaw(utf8.encode(msg));
+      expect(p1363.rawBytes.length, 64);
+
+      final der = p1363.toDer();
+      expect(crypto.verify(utf8.encode(msg), der.derBytes), isTrue);
+
+      final backToP1363 = der.toP1363();
+      expect(backToP1363.rawBytes, equals(p1363.rawBytes));
     });
   });
 }

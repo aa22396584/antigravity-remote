@@ -24,6 +24,7 @@ class _QrScannerViewState extends State<QrScannerView>
   late Animation<double> _scanLineAnimation;
   final TextEditingController _manualInputController = TextEditingController();
   bool _isProcessing = false;
+  bool _isCommitting = false;
   bool _showManualDialog = false;
 
   @override
@@ -47,29 +48,57 @@ class _QrScannerViewState extends State<QrScannerView>
     super.dispose();
   }
 
+  Future<void> _commitTarget(ParsedRemoteTarget target) async {
+    if (_isCommitting || !mounted) return;
+    _isCommitting = true;
+    _isProcessing = true;
+    try {
+      await _scannerController.stop();
+    } catch (_) {}
+    if (mounted) {
+      Navigator.of(context).pop(target);
+    }
+  }
+
   void _handleBarcode(BarcodeCapture capture) {
-    if (_isProcessing) return;
+    if (_isProcessing || _isCommitting || _showManualDialog) return;
 
     for (final barcode in capture.barcodes) {
       final rawValue = barcode.rawValue;
       if (rawValue != null && rawValue.isNotEmpty) {
         final parsed = QrParserService.parse(rawValue);
         if (parsed != null) {
-          _isProcessing = true;
-          Navigator.of(context).pop(parsed);
+          _commitTarget(parsed);
           break;
         }
       }
     }
   }
 
+  void _openManualDialog() {
+    setState(() => _showManualDialog = true);
+    try {
+      _scannerController.stop();
+    } catch (_) {}
+  }
+
+  void _closeManualDialog() {
+    setState(() => _showManualDialog = false);
+    if (!_isCommitting && !_isProcessing) {
+      try {
+        _scannerController.start();
+      } catch (_) {}
+    }
+  }
+
   void _submitManual() {
+    if (_isCommitting) return;
     final text = _manualInputController.text.trim();
     if (text.isEmpty) return;
 
     final parsed = QrParserService.parse(text);
     if (parsed != null) {
-      Navigator.of(context).pop(parsed);
+      _commitTarget(parsed);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -203,7 +232,7 @@ class _QrScannerViewState extends State<QrScannerView>
                   text: '手動輸入配對網址或 ID',
                   isOutlined: true,
                   icon: Icons.keyboard,
-                  onPressed: () => setState(() => _showManualDialog = true),
+                  onPressed: _openManualDialog,
                 ),
               ],
             ),
@@ -235,7 +264,7 @@ class _QrScannerViewState extends State<QrScannerView>
                           ),
                           IconButton(
                             icon: const Icon(Icons.close, color: CyberColors.textMuted),
-                            onPressed: () => setState(() => _showManualDialog = false),
+                            onPressed: _closeManualDialog,
                           ),
                         ],
                       ),
@@ -258,7 +287,7 @@ class _QrScannerViewState extends State<QrScannerView>
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           TextButton(
-                            onPressed: () => setState(() => _showManualDialog = false),
+                            onPressed: _closeManualDialog,
                             child: const Text('取消', style: TextStyle(color: CyberColors.textMuted)),
                           ),
                           const SizedBox(width: 10),

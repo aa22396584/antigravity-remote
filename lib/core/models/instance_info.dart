@@ -1,5 +1,7 @@
 enum InstanceConnectionStatus {
   unspecified,
+  unverified,
+  connecting,
   connected,
   disconnected,
   idle,

@@ -56,6 +56,56 @@ class DeviceListView extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // Demo Mode Banner (Issue #6)
+          if (deviceState.isDemoMode)
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: CyberColors.emerald.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: CyberColors.emerald.withOpacity(0.4)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, color: CyberColors.emerald, size: 18),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      '展示模式：此模式下操作皆為離線模擬，不會控制真實電腦。',
+                      style: TextStyle(fontSize: 12.5, color: CyberColors.emerald, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          if (deviceState.devices.isEmpty)
+            CyberCard(
+              padding: const EdgeInsets.all(24),
+              margin: const EdgeInsets.only(bottom: 16),
+              child: Column(
+                children: [
+                  const Icon(Icons.devices_other, size: 48, color: CyberColors.textMuted),
+                  const SizedBox(height: 12),
+                  const Text(
+                    '尚未配對任何裝置',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: CyberColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    '請點擊下方「掃描 QR 配對」或「手動新增」開始連線遠端 Antigravity 實體。',
+                    style: TextStyle(fontSize: 13, color: CyberColors.textSecondary),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+
           // 1. Active Device Hero Card
           if (deviceState.activeDevice != null) ...[
             CyberCard(

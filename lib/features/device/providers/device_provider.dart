@@ -5,6 +5,7 @@ import '../../../core/network/cloud_relay_client.dart';
 import '../../../core/network/dual_transport_manager.dart';
 import '../../../core/network/endpoints.dart';
 import '../../../core/network/webrtc_mesh_client.dart';
+import '../../../core/services/diagnostic_service.dart';
 import '../../../core/services/mock_antigravity_service.dart';
 import '../../../core/services/remote_control_service.dart';
 import '../../../core/services/storage_service.dart';
@@ -29,7 +30,7 @@ class DeviceState {
     this.accessToken,
     this.isDemoMode = true,
     this.activeTransport = TransportType.p2p,
-    this.currentLatencyMs = 14,
+    this.currentLatencyMs,
   });
 
   DeviceState copyWith({
@@ -44,6 +45,7 @@ class DeviceState {
     bool? isDemoMode,
     TransportType? activeTransport,
     int? currentLatencyMs,
+    bool clearLatency = false,
   }) {
     return DeviceState(
       devices: devices ?? this.devices,
@@ -54,7 +56,7 @@ class DeviceState {
       accessToken: accessToken ?? this.accessToken,
       isDemoMode: isDemoMode ?? this.isDemoMode,
       activeTransport: activeTransport ?? this.activeTransport,
-      currentLatencyMs: currentLatencyMs ?? this.currentLatencyMs,
+      currentLatencyMs: clearLatency ? null : (currentLatencyMs ?? this.currentLatencyMs),
     );
   }
 }
@@ -90,8 +92,12 @@ class DeviceNotifier extends Notifier<DeviceState> {
       final token = storage.getAccessToken();
       final isDemo = storage.isDemoMode();
 
-      final list = saved.isNotEmpty ? saved : MockAntigravityService.instance.getMockInstances();
-      final defaultDev = list.firstWhere((e) => e.isDefault, orElse: () => list.first);
+      final list = isDemo
+          ? (saved.isNotEmpty ? saved : MockAntigravityService.instance.getMockInstances())
+          : saved;
+      final defaultDev = list.isNotEmpty
+          ? list.firstWhere((e) => e.isDefault, orElse: () => list.first)
+          : null;
 
       return DeviceState(
         devices: list,
@@ -99,8 +105,8 @@ class DeviceNotifier extends Notifier<DeviceState> {
         environment: env,
         accessToken: token,
         isDemoMode: isDemo,
-        activeTransport: defaultDev.transport,
-        currentLatencyMs: defaultDev.latencyMs ?? 14,
+        activeTransport: defaultDev?.transport ?? TransportType.offline,
+        currentLatencyMs: defaultDev?.latencyMs,
       );
     } else {
       final list = MockAntigravityService.instance.getMockInstances();
@@ -153,9 +159,11 @@ class DeviceNotifier extends Notifier<DeviceState> {
       instanceId: instanceId,
       uuid: instanceId,
       name: devName,
-      status: InstanceConnectionStatus.connected,
-      transport: TransportType.p2p,
-      latencyMs: 16,
+      status: state.isDemoMode
+          ? InstanceConnectionStatus.connected
+          : InstanceConnectionStatus.connecting,
+      transport: state.isDemoMode ? TransportType.p2p : TransportType.offline,
+      latencyMs: state.isDemoMode ? 16 : null,
       lastSeen: DateTime.now(),
       isDefault: state.devices.isEmpty,
     );
@@ -180,7 +188,7 @@ class DeviceNotifier extends Notifier<DeviceState> {
         activeDevice: newDevice,
         isConnecting: false,
         activeTransport: newDevice.transport,
-        currentLatencyMs: newDevice.latencyMs ?? 14,
+        currentLatencyMs: newDevice.latencyMs,
       );
       await _storageService?.saveInstance(newDevice);
       return;
@@ -359,6 +367,15 @@ class DeviceNotifier extends Notifier<DeviceState> {
     if (wasActive && nextActive != null) {
       await connectToDevice(nextActive);
     }
+  }
+
+  String exportDiagnosticReport() {
+    return DiagnosticService.instance.exportReport(
+      appVersion: '1.0.0+1',
+      isDemoMode: state.isDemoMode,
+      environment: state.environment.name,
+      deviceCount: state.devices.length,
+    );
   }
 }
 

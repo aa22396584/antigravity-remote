@@ -64,6 +64,12 @@ class _TokenVaultCrypto {
   }
 }
 
+enum BootState {
+  ready,
+  degraded,
+  failed,
+}
+
 class StorageService {
   static const _keyAccessToken = 'ag_access_token';
   static const _keyTokenSalt = 'ag_token_salt';
@@ -71,13 +77,22 @@ class StorageService {
   static const _keyInstances = 'ag_instances';
   static const _keyDemoMode = 'ag_demo_mode';
 
-  final SharedPreferences _prefs;
+  static BootState lastBootState = BootState.ready;
 
-  StorageService(this._prefs);
+  final SharedPreferences _prefs;
+  final BootState bootState;
+
+  StorageService(this._prefs, {this.bootState = BootState.ready});
 
   static Future<StorageService> init() async {
-    final prefs = await SharedPreferences.getInstance();
-    return StorageService(prefs);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      lastBootState = BootState.ready;
+      return StorageService(prefs, bootState: BootState.ready);
+    } catch (_) {
+      lastBootState = BootState.degraded;
+      rethrow;
+    }
   }
 
   Future<String> _getOrCreateSaltAsync() async {
