@@ -99,12 +99,14 @@ class _ConnectionSettingsViewState extends ConsumerState<ConnectionSettingsView>
                   children: [
                     Icon(Icons.cloud_sync, size: 18, color: CyberColors.cyan),
                     SizedBox(width: 8),
-                    Text(
-                      'Google Cloud 端點伺服器',
-                      style: TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w700,
-                        color: CyberColors.textPrimary,
+                    Expanded(
+                      child: Text(
+                        'Google Cloud 端點伺服器',
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w700,
+                          color: CyberColors.textPrimary,
+                        ),
                       ),
                     ),
                   ],
@@ -184,12 +186,14 @@ class _ConnectionSettingsViewState extends ConsumerState<ConnectionSettingsView>
                   children: [
                     Icon(Icons.key, size: 18, color: CyberColors.amber),
                     SizedBox(width: 8),
-                    Text(
-                      'Google OAuth2 Access Token (Bearer)',
-                      style: TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w700,
-                        color: CyberColors.textPrimary,
+                    Expanded(
+                      child: Text(
+                        'Google OAuth2 Access Token (Bearer)',
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w700,
+                          color: CyberColors.textPrimary,
+                        ),
                       ),
                     ),
                   ],
@@ -239,12 +243,14 @@ class _ConnectionSettingsViewState extends ConsumerState<ConnectionSettingsView>
                   children: [
                     Icon(Icons.hub, size: 18, color: CyberColors.violet),
                     SizedBox(width: 8),
-                    Text(
-                      '雙軌傳輸規格說明 (Dual-Transport Architecture)',
-                      style: TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w700,
-                        color: CyberColors.textPrimary,
+                    Expanded(
+                      child: Text(
+                        '雙軌傳輸規格說明 (Dual-Transport Architecture)',
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w700,
+                          color: CyberColors.textPrimary,
+                        ),
                       ),
                     ),
                   ],

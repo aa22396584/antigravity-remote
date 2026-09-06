@@ -30,7 +30,7 @@ class _TerminalConsoleCardState extends State<TerminalConsoleCard> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.chunks.length != widget.chunks.length) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
+        if (mounted && _scrollController.hasClients) {
           _scrollController.animateTo(
             _scrollController.position.maxScrollExtent,
             duration: const Duration(milliseconds: 150),
@@ -127,16 +127,19 @@ class _TerminalConsoleCardState extends State<TerminalConsoleCard> {
               color: CyberColors.surface,
               border: Border(top: BorderSide(color: CyberColors.subtleBorder)),
             ),
-            child: Row(
-              children: [
-                _buildShortcutChip('Ctrl+C', () => widget.onShortcut('Ctrl+C'), isRed: true),
-                const SizedBox(width: 6),
-                _buildShortcutChip('Enter ↵', () => widget.onShortcut('Enter')),
-                const SizedBox(width: 6),
-                _buildShortcutChip('Tab ⇥', () => widget.onShortcut('Tab')),
-                const SizedBox(width: 6),
-                _buildShortcutChip('clear', () => widget.onShortcut('clear')),
-              ],
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _buildShortcutChip('Ctrl+C', () => widget.onShortcut('Ctrl+C'), isRed: true),
+                  const SizedBox(width: 6),
+                  _buildShortcutChip('Enter ↵', () => widget.onShortcut('Enter')),
+                  const SizedBox(width: 6),
+                  _buildShortcutChip('Tab ⇥', () => widget.onShortcut('Tab')),
+                  const SizedBox(width: 6),
+                  _buildShortcutChip('clear', () => widget.onShortcut('clear')),
+                ],
+              ),
             ),
           ),
 

@@ -49,6 +49,7 @@ dependencies:
   protobuf: ^6.0.0
   cryptography_flutter: ^2.3.4
   pointycastle: ^4.0.0
+  app_links: ^7.0.0
 
 dev_dependencies:
   flutter_test:

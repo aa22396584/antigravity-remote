@@ -49,5 +49,19 @@
 	<string>需要相機權限以掃描 Antigravity 遠端連線 QR Code</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>需要區域網路權限以建立 WebRTC P2P 高速通道連線</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.google.antigravity.remote</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>antigravity</string>
+				<string>antigravity-remote</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

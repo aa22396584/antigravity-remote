@@ -43,12 +43,16 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final effectiveBottom = bottomInset > 0 ? bottomInset + 10 : (bottomPadding > 0 ? bottomPadding + 8 : 12.0);
+
     return Container(
       padding: EdgeInsets.only(
         left: 12,
         right: 12,
         top: 8,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 12,
+        bottom: effectiveBottom,
       ),
       decoration: const BoxDecoration(
         color: CyberColors.surface,

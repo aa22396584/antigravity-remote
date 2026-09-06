@@ -137,7 +137,8 @@ class DeviceNotifier extends Notifier<DeviceState> {
     String? name,
     String? hostname,
   }) async {
-    final devName = name ?? hostname ?? 'Antigravity (${instanceId.substring(0, 8)})';
+    final shortId = instanceId.length > 8 ? instanceId.substring(0, 8) : instanceId;
+    final devName = name ?? hostname ?? 'Antigravity ($shortId)';
     final newDevice = InstanceInfo(
       instanceId: instanceId,
       uuid: 'uuid-$instanceId',

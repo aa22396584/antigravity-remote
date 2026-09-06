@@ -167,6 +167,11 @@ class CascadeNotifier extends Notifier<CascadeState> {
       clearPendingInteraction: true,
     );
   }
+
+  void switchCascade(String cascadeId) {
+    if (state.activeCascadeId == cascadeId) return;
+    state = state.copyWith(activeCascadeId: cascadeId);
+  }
 }
 
 final cascadeProvider = NotifierProvider<CascadeNotifier, CascadeState>(CascadeNotifier.new);
