@@ -118,11 +118,31 @@ class _CodeDiffViewerState extends State<CodeDiffViewer> {
     );
   }
 
+  String? _detectFileName(String rawDiff) {
+    if (widget.fileName != null && widget.fileName!.isNotEmpty) {
+      return widget.fileName;
+    }
+    for (final line in rawDiff.split('\n')) {
+      if (line.startsWith('+++ b/')) {
+        return line.substring(6).trim();
+      } else if (line.startsWith('--- a/')) {
+        return line.substring(6).trim();
+      } else if (line.startsWith('diff --git a/')) {
+        final parts = line.split(' ');
+        if (parts.length >= 3 && parts[2].startsWith('a/')) {
+          return parts[2].substring(2).trim();
+        }
+      }
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final parsed = _parseDiff(widget.diff);
     final isLong = parsed.length > _maxInitialLines;
     final visibleLines = (isLong && !_expanded) ? parsed.sublist(0, _maxInitialLines) : parsed;
+    final displayFileName = _detectFileName(widget.diff) ?? 'Unified Code Diff';
 
     int additions = parsed.where((l) => l.type == _DiffLineType.added).length;
     int deletions = parsed.where((l) => l.type == _DiffLineType.deleted).length;
@@ -151,7 +171,7 @@ class _CodeDiffViewerState extends State<CodeDiffViewer> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    widget.fileName ?? 'Unified Code Diff',
+                    displayFileName,
                     style: AppTheme.codeFont(
                       color: CyberColors.textPrimary,
                       fontSize: 12,
@@ -177,18 +197,16 @@ class _CodeDiffViewerState extends State<CodeDiffViewer> {
                 ),
                 const SizedBox(width: 6),
                 IconButton(
-                  icon: const Icon(Icons.copy, size: 15, color: CyberColors.textMuted),
+                  icon: const Icon(Icons.copy, size: 16, color: CyberColors.textMuted),
                   onPressed: () => _copyDiff(context),
                   tooltip: '複製完整 Diff',
-                  splashRadius: 16,
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.content_copy_outlined, size: 15, color: CyberColors.cyan),
+                  icon: const Icon(Icons.content_copy_outlined, size: 16, color: CyberColors.cyan),
                   onPressed: () => _copyAddedCode(context, parsed),
                   tooltip: '複製變更內容',
-                  splashRadius: 16,
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
                 ),
               ],
             ),

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/models/cascade_message.dart';
+import '../../../core/services/deep_link_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/cyber_button.dart';
 import '../../../shared/widgets/cyber_card.dart';
@@ -28,6 +30,7 @@ class CascadeChatView extends ConsumerStatefulWidget {
 
 class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
   final ScrollController _scrollController = ScrollController();
+  final TextEditingController _inputController = TextEditingController();
   bool _userScrolledUp = false;
   bool _hasUnreadUpdates = false;
 
@@ -40,15 +43,11 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
   void _onScroll() {
     if (_scrollController.hasClients) {
       final pos = _scrollController.position;
-      final isNearBottom = (pos.maxScrollExtent - pos.pixels) <= 140;
+      final isNearBottom = (pos.maxScrollExtent - pos.pixels) <= 60;
       if (isNearBottom && _userScrolledUp) {
         setState(() {
           _userScrolledUp = false;
           _hasUnreadUpdates = false;
-        });
-      } else if (!isNearBottom && !_userScrolledUp) {
-        setState(() {
-          _userScrolledUp = true;
         });
       }
     }
@@ -58,6 +57,7 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
   void dispose() {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    _inputController.dispose();
     super.dispose();
   }
 
@@ -76,11 +76,14 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
         }
 
         if (force || isNearBottom) {
+          if ((pos.maxScrollExtent - pos.pixels).abs() < 1) return;
           final maxScroll = pos.maxScrollExtent;
-          if (smooth) {
+          if ((pos.maxScrollExtent - pos.pixels) > 300) {
+            _scrollController.jumpTo(maxScroll);
+          } else if (smooth) {
             _scrollController.animateTo(
               maxScroll,
-              duration: const Duration(milliseconds: 140),
+              duration: const Duration(milliseconds: 100),
               curve: Curves.easeOut,
             );
           } else {
@@ -141,6 +144,8 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
             Text(
               deviceState.activeDevice?.name ?? 'Antigravity Agent',
               style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
             Row(
               children: [
@@ -245,14 +250,48 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
           Expanded(
             child: Stack(
               children: [
-                ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.all(16),
-                  itemCount: cascadeState.messages.length,
-                  itemBuilder: (context, index) {
-                    final message = cascadeState.messages[index];
-                    return _buildMessageItem(message, cascadeNotifier);
+                NotificationListener<ScrollNotification>(
+                  onNotification: (notification) {
+                    if (notification is UserScrollNotification) {
+                      if (notification.direction == ScrollDirection.forward) {
+                        // 使用者手勢主動向上翻閱歷史，立即啟動手勢保護 (Issue #20)
+                        if (!_userScrolledUp) {
+                          setState(() {
+                            _userScrolledUp = true;
+                          });
+                        }
+                      } else if (notification.direction == ScrollDirection.reverse) {
+                        final pos = notification.metrics;
+                        if ((pos.maxScrollExtent - pos.pixels) <= 30) {
+                          if (_userScrolledUp) {
+                            setState(() {
+                              _userScrolledUp = false;
+                              _hasUnreadUpdates = false;
+                            });
+                          }
+                        }
+                      }
+                    } else if (notification is ScrollUpdateNotification) {
+                      if (notification.dragDetails != null && (notification.scrollDelta ?? 0) < 0) {
+                        if (!_userScrolledUp) {
+                          setState(() {
+                            _userScrolledUp = true;
+                          });
+                        }
+                      }
+                    }
+                    return false;
                   },
+                  child: ListView.builder(
+                    key: const PageStorageKey('cascade_chat_list'),
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(16),
+                    itemCount: cascadeState.messages.length,
+                    itemBuilder: (context, index) {
+                      final message = cascadeState.messages[index];
+                      return _buildMessageItem(message, cascadeNotifier);
+                    },
+                  ),
                 ),
                 if (_userScrolledUp) _buildScrollToBottomPill(),
               ],
@@ -261,6 +300,7 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
 
           // 3. Bottom Chat Input Bar with Stop & Safety
           ChatInputBar(
+            controller: _inputController,
             isStreaming: cascadeState.isStreaming,
             onSend: (prompt) => cascadeNotifier.sendPrompt(prompt),
             onStop: () => cascadeNotifier.cancelActiveTask(),
@@ -286,7 +326,8 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
           },
           borderRadius: BorderRadius.circular(20),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
               color: CyberColors.surfaceElevated,
               borderRadius: BorderRadius.circular(20),
@@ -381,16 +422,35 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
                     const SizedBox(width: 6),
                     const Text('傳送中...', style: TextStyle(color: CyberColors.textMuted, fontSize: 11)),
                   ] else if (isFailed) ...[
-                    const Icon(Icons.error_outline, size: 13, color: CyberColors.red),
+                    const Icon(Icons.error_outline, size: 14, color: CyberColors.red),
                     const SizedBox(width: 4),
                     const Text('發送失敗', style: TextStyle(color: CyberColors.red, fontSize: 11, fontWeight: FontWeight.bold)),
                     const SizedBox(width: 8),
                     InkWell(
                       onTap: () => notifier.retrySendMessage(message.id),
                       borderRadius: BorderRadius.circular(4),
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                        child: Text('重試 ↻', style: TextStyle(color: CyberColors.cyan, fontSize: 11, fontWeight: FontWeight.bold)),
+                      child: Container(
+                        constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                        alignment: Alignment.center,
+                        child: const Text('重試 ↻', style: TextStyle(color: CyberColors.cyan, fontSize: 11, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    InkWell(
+                      onTap: () {
+                        _inputController.text = message.content;
+                        _inputController.selection = TextSelection.fromPosition(
+                          TextPosition(offset: message.content.length),
+                        );
+                        notifier.removeMessage(message.id);
+                      },
+                      borderRadius: BorderRadius.circular(4),
+                      child: Container(
+                        constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                        alignment: Alignment.center,
+                        child: const Text('編輯草稿 ✎', style: TextStyle(color: CyberColors.amber, fontSize: 11, fontWeight: FontWeight.bold)),
                       ),
                     ),
                   ],
@@ -453,19 +513,31 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
                 onTapLink: (text, href, title) async {
                   if (href == null) return;
                   final uri = Uri.tryParse(href);
-                  if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
-                    final canLaunch = await canLaunchUrl(uri);
-                    if (canLaunch) {
-                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  if (uri != null) {
+                    if (uri.scheme == 'antigravity') {
+                      ref.read(deepLinkServiceProvider).handleRawUri(href);
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text('已識別 Antigravity 內部連線協議並自動觸發處理'),
+                          backgroundColor: CyberColors.emerald,
+                        ),
+                      );
+                      return;
                     }
-                  } else {
-                    messenger.showSnackBar(
-                      const SnackBar(
-                        content: Text('已阻止非安全之外部連結協議 (僅允許 http/https)'),
-                        backgroundColor: CyberColors.red,
-                      ),
-                    );
+                    if (uri.scheme == 'http' || uri.scheme == 'https') {
+                      final canLaunch = await canLaunchUrl(uri);
+                      if (canLaunch) {
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      }
+                      return;
+                    }
                   }
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('已阻止非安全之外部連結協議 (僅允許 http/https)'),
+                      backgroundColor: CyberColors.red,
+                    ),
+                  );
                 },
                 styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
                   p: const TextStyle(color: CyberColors.textPrimary, fontSize: 14, height: 1.5),

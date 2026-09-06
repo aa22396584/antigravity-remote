@@ -4,10 +4,11 @@ import 'package:flutter/services.dart';
 import '../../../core/theme/app_theme.dart';
 
 class ChatInputBar extends StatefulWidget {
-  final FutureOr<void> Function(String prompt) onSend;
+  final FutureOr<dynamic> Function(String prompt) onSend;
   final VoidCallback? onStop;
   final bool isStreaming;
   final String? initialText;
+  final TextEditingController? controller;
 
   const ChatInputBar({
     super.key,
@@ -15,6 +16,7 @@ class ChatInputBar extends StatefulWidget {
     this.onStop,
     this.isStreaming = false,
     this.initialText,
+    this.controller,
   });
 
   @override
@@ -22,7 +24,9 @@ class ChatInputBar extends StatefulWidget {
 }
 
 class _ChatInputBarState extends State<ChatInputBar> {
-  late final TextEditingController _textController;
+  TextEditingController? _internalController;
+  TextEditingController get _textController =>
+      widget.controller ?? (_internalController ??= TextEditingController(text: widget.initialText));
   final FocusNode _focusNode = FocusNode();
   bool _isSending = false;
 
@@ -36,12 +40,25 @@ class _ChatInputBarState extends State<ChatInputBar> {
   @override
   void initState() {
     super.initState();
-    _textController = TextEditingController(text: widget.initialText);
+    if (widget.controller == null) {
+      _internalController = TextEditingController(text: widget.initialText);
+    }
+  }
+
+  @override
+  void didUpdateWidget(ChatInputBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialText != null && widget.initialText != oldWidget.initialText) {
+      _textController.text = widget.initialText!;
+      _textController.selection = TextSelection.fromPosition(
+        TextPosition(offset: _textController.text.length),
+      );
+    }
   }
 
   @override
   void dispose() {
-    _textController.dispose();
+    _internalController?.dispose();
     _focusNode.dispose();
     super.dispose();
   }
@@ -55,7 +72,13 @@ class _ChatInputBarState extends State<ChatInputBar> {
     setState(() => _isSending = true);
 
     try {
-      await widget.onSend(text);
+      final res = await widget.onSend(text);
+      if (res == false) {
+        // 若發送返回 false，表示未成功交付，復原草稿以便修改或重試 (Issue #19)
+        if (mounted) {
+          _textController.text = draftSnapshot;
+        }
+      }
     } catch (_) {
       // 若發送出現異常，復原草稿以便使用者修改或重試 (Issue #19)
       if (mounted) {

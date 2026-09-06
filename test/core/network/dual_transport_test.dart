@@ -187,7 +187,25 @@ void main() {
 
       // Verify reconnect attempt is reset on manual disconnect
       await manager.disconnect();
+      expect(manager.reconnectAttempts, 0);
       expect(manager.currentTransport, TransportType.offline);
+    });
+
+    test('successful P2P connection resets reconnectAttempts to 0', () async {
+      final fakeRelay = FakeRelayClient();
+      final fakeMesh = FakeMeshClient();
+
+      final manager = DualTransportManager(
+        relayClient: fakeRelay,
+        meshClient: fakeMesh,
+      );
+      addTearDown(manager.dispose);
+
+      await manager.connectAll();
+      fakeMesh.emitStatus(true);
+      await Future.delayed(Duration.zero);
+      expect(manager.currentTransport, TransportType.p2p);
+      expect(manager.reconnectAttempts, 0);
     });
   });
 }

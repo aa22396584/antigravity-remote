@@ -4,6 +4,7 @@ import '../../../core/models/user_interaction.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/cyber_button.dart';
 import '../../../shared/widgets/cyber_card.dart';
+import 'code_diff_viewer.dart';
 
 class UserApprovalDialog extends StatefulWidget {
   final UserInteractionRequest request;
@@ -185,6 +186,16 @@ class _UserApprovalDialogState extends State<UserApprovalDialog> {
                 const SizedBox(height: 10),
               ],
 
+              // Code Diff presentation for patch/file edits (Issue #27)
+              if (req.actionTarget.contains('@@ ') || req.description.contains('@@ ')) ...[
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: CodeDiffViewer(
+                    diff: req.actionTarget.contains('@@ ') ? req.actionTarget : req.description,
+                  ),
+                ),
+              ],
+
               // Target Box with Typed presentation & One-click Copy (Issue #27)
               CyberCard(
                 backgroundColor: CyberColors.terminalBg,
@@ -207,8 +218,7 @@ class _UserApprovalDialogState extends State<UserApprovalDialog> {
                       icon: const Icon(Icons.copy, size: 16, color: CyberColors.cyan),
                       onPressed: () => _copyTarget(context, req.actionTarget),
                       tooltip: '複製完整指令/目標',
-                      splashRadius: 16,
-                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                      constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
                     ),
                   ],
                 ),

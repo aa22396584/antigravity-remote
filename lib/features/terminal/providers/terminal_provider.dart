@@ -157,6 +157,12 @@ class TerminalNotifier extends Notifier<TerminalState> {
     if (key == 'Ctrl+C') {
       // 發送 SIGINT (\x03)，不附帶額外換行符
       await sendRaw('\x03', displayEcho: '^C\x03\n');
+    } else if (key == 'Ctrl+D') {
+      // 發送 EOF (\x04)
+      await sendRaw('\x04', displayEcho: '^D\n');
+    } else if (key == 'Esc') {
+      // 發送 Escape (\x1b)
+      await sendRaw('\x1b');
     } else if (key == 'Enter') {
       await sendRaw('\n', displayEcho: '\n');
     } else if (key == 'Tab') {

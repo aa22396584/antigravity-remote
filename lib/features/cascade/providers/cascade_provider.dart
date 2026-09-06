@@ -250,6 +250,11 @@ class CascadeNotifier extends Notifier<CascadeState> {
     );
   }
 
+  void removeMessage(String messageId) {
+    final updated = state.messages.where((m) => m.id != messageId).toList();
+    state = state.copyWith(messages: updated);
+  }
+
   void switchCascade(String cascadeId) {
     if (state.activeCascadeId == cascadeId) return;
     state = state.copyWith(activeCascadeId: cascadeId);

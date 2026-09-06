@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'dart:typed_data';
 import '../models/instance_info.dart';
 import 'cloud_relay_client.dart';
@@ -34,12 +35,13 @@ class DualTransportManager {
   StreamSubscription? _meshLatencySub;
   StreamSubscription? _meshConnSub;
 
-  // 斷線自動重連退避（Exponential Backoff）
+  // 斷線自動重連退避（Exponential Backoff + Jitter）
   bool _autoReconnect = true;
   Timer? _reconnectTimer;
   int _reconnectAttempts = 0;
   static const int _baseBackoffMs = 1000;
   static const int _maxBackoffMs = 30000;
+  final Random _random = Random();
 
   DualTransportManager({
     required this.relayClient,
@@ -113,44 +115,46 @@ class DualTransportManager {
 
     // 2. 背景嘗試發起 WebRTC P2P 網狀連線
     if (meshClient != null) {
-      unawaited(_attemptMeshUpgrade());
+      unawaited(_attemptMeshUpgrade().then((connected) {
+        if (!connected && _autoReconnect) {
+          _scheduleMeshReconnect();
+        }
+      }));
     }
   }
 
   void _scheduleMeshReconnect() {
     if (!_autoReconnect || meshClient == null || _reconnectTimer?.isActive == true) return;
-    final delayMs = (_baseBackoffMs * (1 << _reconnectAttempts.clamp(0, 5))).clamp(_baseBackoffMs, _maxBackoffMs);
+    final expMs = (_baseBackoffMs * (1 << _reconnectAttempts.clamp(0, 5))).clamp(_baseBackoffMs, _maxBackoffMs);
+    final jitterMax = (expMs * 0.2).toInt().clamp(1, 2000);
+    final jitterMs = _random.nextInt(jitterMax);
+    final delayMs = (expMs + jitterMs).clamp(_baseBackoffMs, _maxBackoffMs);
+
     _reconnectTimer = Timer(Duration(milliseconds: delayMs), () async {
       _reconnectAttempts++;
-      try {
-        if (meshClient != null && !meshClient!.isConnected) {
-          await _attemptMeshUpgrade();
-          if (meshClient!.isConnected) {
-            _reconnectAttempts = 0;
-          } else {
-            _scheduleMeshReconnect();
-          }
-        }
-      } catch (_) {
+      final connected = await _attemptMeshUpgrade();
+      if (!connected && _autoReconnect) {
         _scheduleMeshReconnect();
       }
     });
   }
 
-  Future<void> _attemptMeshUpgrade() async {
+  Future<bool> _attemptMeshUpgrade() async {
     try {
+      if (meshClient == null) return false;
       await meshClient!.connect();
       if (meshClient!.isConnected) {
         _reconnectAttempts = 0;
+        _reconnectTimer?.cancel();
+        _reconnectTimer = null;
         _setTransport(TransportType.p2p);
-      } else {
-        _scheduleMeshReconnect();
+        return true;
       }
     } catch (_) {
-      // 若 P2P 協商失敗或逾時，繼續保留 Cloud Relay 並排程退避重連
+      // 若 P2P 協商失敗或逾時，繼續保留 Cloud Relay
       _setTransport(TransportType.relay);
-      _scheduleMeshReconnect();
     }
+    return false;
   }
 
   void _setTransport(TransportType type) {
@@ -258,6 +262,7 @@ class DualTransportManager {
     _autoReconnect = false;
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
+    _reconnectAttempts = 0;
     _relayLatencySub?.cancel();
     _meshLatencySub?.cancel();
     _meshConnSub?.cancel();

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import '../../../core/models/terminal_stream.dart';
 import '../../../core/theme/app_theme.dart';
@@ -37,11 +38,9 @@ class _TerminalConsoleCardState extends State<TerminalConsoleCard> {
   void _onScroll() {
     if (_scrollController.hasClients) {
       final pos = _scrollController.position;
-      final isNearBottom = (pos.maxScrollExtent - pos.pixels) <= 100;
+      final isNearBottom = (pos.maxScrollExtent - pos.pixels) <= 60;
       if (isNearBottom && _userScrolledUp) {
         setState(() => _userScrolledUp = false);
-      } else if (!isNearBottom && !_userScrolledUp) {
-        setState(() => _userScrolledUp = true);
       }
     }
   }
@@ -66,11 +65,16 @@ class _TerminalConsoleCardState extends State<TerminalConsoleCard> {
         }
 
         if (force || isNearBottom) {
-          _scrollController.animateTo(
-            pos.maxScrollExtent,
-            duration: const Duration(milliseconds: 140),
-            curve: Curves.easeOut,
-          );
+          if ((pos.maxScrollExtent - pos.pixels).abs() < 1) return;
+          if ((pos.maxScrollExtent - pos.pixels) > 300) {
+            _scrollController.jumpTo(pos.maxScrollExtent);
+          } else {
+            _scrollController.animateTo(
+              pos.maxScrollExtent,
+              duration: const Duration(milliseconds: 100),
+              curve: Curves.easeOut,
+            );
+          }
           if (_userScrolledUp) {
             setState(() => _userScrolledUp = false);
           }
@@ -146,13 +150,13 @@ class _TerminalConsoleCardState extends State<TerminalConsoleCard> {
                   icon: const Icon(Icons.copy_all, size: 16, color: CyberColors.textMuted),
                   onPressed: _copyLogs,
                   tooltip: '複製全部終端日誌',
-                  splashRadius: 16,
+                  constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
                 ),
                 IconButton(
                   icon: const Icon(Icons.clear_all, size: 16, color: CyberColors.textMuted),
                   onPressed: widget.onClear,
                   tooltip: '清空終端畫面',
-                  splashRadius: 16,
+                  constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
                 ),
               ],
             ),
@@ -162,34 +166,61 @@ class _TerminalConsoleCardState extends State<TerminalConsoleCard> {
           Expanded(
             child: Stack(
               children: [
-                SelectionArea(
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.all(12),
-                    itemCount: widget.chunks.length,
-                    itemBuilder: (context, index) {
-                      final chunk = widget.chunks[index];
-                      if (chunk.isSystem) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          child: Text(
-                            chunk.text,
-                            style: const TextStyle(
-                              color: CyberColors.amber,
-                              fontSize: 11,
-                              fontStyle: FontStyle.italic,
+                NotificationListener<ScrollNotification>(
+                  onNotification: (notification) {
+                    if (notification is UserScrollNotification) {
+                      if (notification.direction == ScrollDirection.forward) {
+                        // 使用者向上翻閱歷史，立即啟用手勢保護 (Issue #20)
+                        if (!_userScrolledUp) {
+                          setState(() => _userScrolledUp = true);
+                        }
+                      } else if (notification.direction == ScrollDirection.reverse) {
+                        final pos = notification.metrics;
+                        if ((pos.maxScrollExtent - pos.pixels) <= 30) {
+                          if (_userScrolledUp) {
+                            setState(() => _userScrolledUp = false);
+                          }
+                        }
+                      }
+                    } else if (notification is ScrollUpdateNotification) {
+                      if (notification.dragDetails != null && (notification.scrollDelta ?? 0) < 0) {
+                        if (!_userScrolledUp) {
+                          setState(() => _userScrolledUp = true);
+                        }
+                      }
+                    }
+                    return false;
+                  },
+                  child: SelectionArea(
+                    child: ListView.builder(
+                      key: const PageStorageKey('terminal_console_list'),
+                      controller: _scrollController,
+                      padding: const EdgeInsets.all(12),
+                      itemCount: widget.chunks.length,
+                      itemBuilder: (context, index) {
+                        final chunk = widget.chunks[index];
+                        if (chunk.isSystem) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Text(
+                              chunk.text,
+                              style: const TextStyle(
+                                color: CyberColors.amber,
+                                fontSize: 11,
+                                fontStyle: FontStyle.italic,
+                              ),
                             ),
+                          );
+                        }
+                        return SelectableText.rich(
+                          AnsiParser.parseToSpan(
+                            chunk.text,
+                            defaultColor: chunk.isError ? CyberColors.red : CyberColors.terminalText,
+                            fontSize: 12,
                           ),
                         );
-                      }
-                      return SelectableText.rich(
-                        AnsiParser.parseToSpan(
-                          chunk.text,
-                          defaultColor: chunk.isError ? CyberColors.red : CyberColors.terminalText,
-                          fontSize: 12,
-                        ),
-                      );
-                    },
+                      },
+                    ),
                   ),
                 ),
                 if (_userScrolledUp)
@@ -200,7 +231,8 @@ class _TerminalConsoleCardState extends State<TerminalConsoleCard> {
                       onTap: () => _scrollToBottom(force: true),
                       borderRadius: BorderRadius.circular(16),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
                           color: CyberColors.surfaceElevated,
                           borderRadius: BorderRadius.circular(16),
@@ -215,7 +247,7 @@ class _TerminalConsoleCardState extends State<TerminalConsoleCard> {
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.arrow_downward, size: 13, color: CyberColors.cyan),
+                            Icon(Icons.arrow_downward, size: 14, color: CyberColors.cyan),
                             SizedBox(width: 4),
                             Text('回到底部', style: TextStyle(color: CyberColors.cyan, fontSize: 11, fontWeight: FontWeight.bold)),
                           ],
@@ -227,7 +259,7 @@ class _TerminalConsoleCardState extends State<TerminalConsoleCard> {
             ),
           ),
 
-          // Shortcut bar (Ctrl+C, Enter, Tab, clear) with accessible hit targets (Issue #26)
+          // Shortcut bar (Ctrl+C, Esc, Enter, Tab, clear) with accessible hit targets (Issue #26)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: const BoxDecoration(
@@ -243,6 +275,18 @@ class _TerminalConsoleCardState extends State<TerminalConsoleCard> {
                     () => widget.onShortcut('Ctrl+C'),
                     tooltip: '中斷遠端終端程序 (SIGINT)',
                     isRed: true,
+                  ),
+                  const SizedBox(width: 8),
+                  _buildShortcutChip(
+                    'Ctrl+D',
+                    () => widget.onShortcut('Ctrl+D'),
+                    tooltip: '發送 EOF 結束輸入 (Ctrl+D)',
+                  ),
+                  const SizedBox(width: 8),
+                  _buildShortcutChip(
+                    'Esc',
+                    () => widget.onShortcut('Esc'),
+                    tooltip: '發送 Escape 鍵 (ESC)',
                   ),
                   const SizedBox(width: 8),
                   _buildShortcutChip(
@@ -267,37 +311,47 @@ class _TerminalConsoleCardState extends State<TerminalConsoleCard> {
             ),
           ),
 
-          // Input Line
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            color: CyberColors.surfaceElevated,
-            child: Row(
-              children: [
-                const Text('➜ ', style: TextStyle(color: CyberColors.cyan, fontWeight: FontWeight.bold)),
-                Expanded(
-                  child: TextField(
-                    controller: _inputController,
-                    style: AppTheme.codeFont(color: Colors.white, fontSize: 13),
-                    decoration: const InputDecoration(
-                      hintText: '輸入指令並發送至本機終端...',
-                      hintStyle: TextStyle(color: CyberColors.textMuted, fontSize: 12),
-                      isDense: true,
-                      contentPadding: EdgeInsets.symmetric(vertical: 8),
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
+          // Input Line with keyboard avoidance (Issue #21)
+          Builder(
+            builder: (context) {
+              final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+              return Container(
+                padding: EdgeInsets.only(
+                  left: 12,
+                  right: 12,
+                  top: 6,
+                  bottom: bottomInset > 0 ? bottomInset + 6 : 6,
+                ),
+                color: CyberColors.surfaceElevated,
+                child: Row(
+                  children: [
+                    const Text('➜ ', style: TextStyle(color: CyberColors.cyan, fontWeight: FontWeight.bold)),
+                    Expanded(
+                      child: TextField(
+                        controller: _inputController,
+                        style: AppTheme.codeFont(color: Colors.white, fontSize: 13),
+                        decoration: const InputDecoration(
+                          hintText: '輸入指令並發送至本機終端...',
+                          hintStyle: TextStyle(color: CyberColors.textMuted, fontSize: 12),
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(vertical: 8),
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                        ),
+                        onSubmitted: (_) => _submit(),
+                      ),
                     ),
-                    onSubmitted: (_) => _submit(),
-                  ),
+                    IconButton(
+                      icon: const Icon(Icons.send, size: 16, color: CyberColors.cyan),
+                      onPressed: _submit,
+                      constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                      tooltip: '發送按鍵',
+                    ),
+                  ],
                 ),
-                IconButton(
-                  icon: const Icon(Icons.send, size: 16, color: CyberColors.cyan),
-                  onPressed: _submit,
-                  splashRadius: 16,
-                  tooltip: '發送按鍵',
-                ),
-              ],
-            ),
+              );
+            },
           ),
         ],
       ),
@@ -316,9 +370,9 @@ class _TerminalConsoleCardState extends State<TerminalConsoleCard> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(6),
         child: Container(
-          constraints: const BoxConstraints(minHeight: 36, minWidth: 44),
+          constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
           alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
             color: isRed ? CyberColors.red.withOpacity(0.15) : CyberColors.surfaceElevated,
             borderRadius: BorderRadius.circular(6),

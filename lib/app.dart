@@ -22,6 +22,8 @@ class _AntigravityRemoteAppState extends ConsumerState<AntigravityRemoteApp> {
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
       GlobalKey<ScaffoldMessengerState>();
+  final GlobalKey _stackKey = GlobalKey();
+  final PageStorageBucket _bucket = PageStorageBucket();
   late final List<Widget> _pages;
 
   @override
@@ -116,11 +118,16 @@ class _AntigravityRemoteAppState extends ConsumerState<AntigravityRemoteApp> {
         child: Builder(
           builder: (context) {
             final isWide = MediaQuery.of(context).size.width >= 800;
+            final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
 
-            // 桌面與行動端統一使用持久化 IndexedStack，徹底保留草稿、滾動位置與輸入狀態 (Issue #22)
-            final contentStack = IndexedStack(
-              index: _currentIndex,
-              children: _pages,
+            // 桌面與行動端統一使用持久化 IndexedStack + PageStorage，徹底保留草稿、滾動位置與輸入狀態 (Issue #22)
+            final contentStack = PageStorage(
+              bucket: _bucket,
+              child: IndexedStack(
+                key: _stackKey,
+                index: _currentIndex,
+                children: _pages,
+              ),
             );
 
             if (isWide) {
@@ -184,17 +191,19 @@ class _AntigravityRemoteAppState extends ConsumerState<AntigravityRemoteApp> {
               );
             }
 
-            // Mobile Bottom Navigation Bar
+            // Mobile Bottom Navigation Bar (鍵盤彈起時避讓隱藏以避免遮擋內容，Issue #21)
             return Scaffold(
               resizeToAvoidBottomInset: false,
               body: contentStack,
-              bottomNavigationBar: Container(
-                decoration: const BoxDecoration(
-                  border: Border(
-                    top: BorderSide(color: CyberColors.subtleBorder, width: 1),
-                  ),
-                ),
-                child: NavigationBar(
+              bottomNavigationBar: isKeyboardOpen
+                  ? null
+                  : Container(
+                      decoration: const BoxDecoration(
+                        border: Border(
+                          top: BorderSide(color: CyberColors.subtleBorder, width: 1),
+                        ),
+                      ),
+                      child: NavigationBar(
                   selectedIndex: _currentIndex,
                   backgroundColor: CyberColors.surface,
                   indicatorColor: CyberColors.cyan.withOpacity(0.2),
