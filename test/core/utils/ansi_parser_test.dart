@@ -83,7 +83,8 @@ void main() {
 
       final span = AnsiParser.parseToSpan(input);
       expect(span.text != null || span.children != null, isTrue);
-      final combinedText = span.text ?? span.children!.map((e) => (e as TextSpan).text).join();
+      final combinedText =
+          span.text ?? span.children!.map((e) => (e as TextSpan).text).join();
       expect(combinedText.contains('Terminal: bash'), isFalse);
       expect(combinedText.contains('Hello Terminal'), isTrue);
     });

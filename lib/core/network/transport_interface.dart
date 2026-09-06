@@ -23,7 +23,8 @@ class RpcException implements Exception {
   const RpcException(this.message, {this.statusCode, this.details});
 
   @override
-  String toString() => 'RpcException: $message${statusCode != null ? ' (status: $statusCode)' : ''}';
+  String toString() =>
+      'RpcException: $message${statusCode != null ? ' (status: $statusCode)' : ''}';
 }
 
 /// 封包在發送前就失敗（根本未送出到網路線路，例如未連線、DataChannel 關閉或 send 拋錯）
@@ -34,7 +35,8 @@ class PreFlightException implements Exception {
   const PreFlightException(this.message, {this.cause});
 
   @override
-  String toString() => 'PreFlightException: $message${cause != null ? ' (cause: $cause)' : ''}';
+  String toString() =>
+      'PreFlightException: $message${cause != null ? ' (cause: $cause)' : ''}';
 }
 
 /// 封包已成功交付底層 DataChannel 送出（In-flight / Commit），但後續等待回覆時逾時或斷線
@@ -56,6 +58,6 @@ class ProtocolException implements Exception {
   const ProtocolException(this.message, {this.cause});
 
   @override
-  String toString() => 'ProtocolException: $message${cause != null ? ' (cause: $cause)' : ''}';
+  String toString() =>
+      'ProtocolException: $message${cause != null ? ' (cause: $cause)' : ''}';
 }
-

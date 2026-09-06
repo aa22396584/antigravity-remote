@@ -19,10 +19,7 @@ import '../widgets/user_approval_dialog.dart';
 class CascadeChatView extends ConsumerStatefulWidget {
   final VoidCallback? onOpenTerminal;
 
-  const CascadeChatView({
-    super.key,
-    this.onOpenTerminal,
-  });
+  const CascadeChatView({super.key, this.onOpenTerminal});
 
   @override
   ConsumerState<CascadeChatView> createState() => _CascadeChatViewState();
@@ -108,7 +105,8 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
     final messenger = ScaffoldMessenger.of(context);
 
     ref.listen<CascadeState>(cascadeProvider, (prev, next) {
-      if (next.errorMessage != null && prev?.errorMessage != next.errorMessage) {
+      if (next.errorMessage != null &&
+          prev?.errorMessage != next.errorMessage) {
         messenger.showSnackBar(
           SnackBar(
             content: Text(next.errorMessage!),
@@ -118,14 +116,20 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
         );
       }
 
-      final prevLast = prev?.messages.isNotEmpty == true ? prev!.messages.last : null;
-      final nextLast = next.messages.isNotEmpty == true ? next.messages.last : null;
-      final contentChanged = prevLast?.content != nextLast?.content ||
+      final prevLast = prev?.messages.isNotEmpty == true
+          ? prev!.messages.last
+          : null;
+      final nextLast = next.messages.isNotEmpty == true
+          ? next.messages.last
+          : null;
+      final contentChanged =
+          prevLast?.content != nextLast?.content ||
           prevLast?.thinking != nextLast?.thinking ||
           prevLast?.trajectorySteps.length != nextLast?.trajectorySteps.length;
 
       final newMsgAdded = prev?.messages.length != next.messages.length;
-      final newInteraction = prev?.pendingInteraction != next.pendingInteraction &&
+      final newInteraction =
+          prev?.pendingInteraction != next.pendingInteraction &&
           next.pendingInteraction != null;
 
       if (newMsgAdded || newInteraction) {
@@ -177,7 +181,11 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
                 value: 'clear',
                 child: Row(
                   children: [
-                    Icon(Icons.delete_outline, size: 18, color: CyberColors.red),
+                    Icon(
+                      Icons.delete_outline,
+                      size: 18,
+                      color: CyberColors.red,
+                    ),
                     SizedBox(width: 8),
                     Text('清空對話歷史', style: TextStyle(color: CyberColors.red)),
                   ],
@@ -196,7 +204,11 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
               color: CyberColors.amber.withOpacity(0.15),
               child: Row(
                 children: [
-                  const Icon(Icons.warning_amber, color: CyberColors.amber, size: 20),
+                  const Icon(
+                    Icons.warning_amber,
+                    color: CyberColors.amber,
+                    size: 20,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -215,7 +227,10 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
                     text: '立即審批',
                     color: CyberColors.amber,
                     textColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
                     onPressed: () {
                       UserApprovalDialog.show(
                         context,
@@ -223,7 +238,9 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
                         onRespond: (approved, feedback) async {
                           try {
                             await cascadeNotifier.handleApproval(
-                              interactionId: cascadeState.pendingInteraction!.interactionId,
+                              interactionId: cascadeState
+                                  .pendingInteraction!
+                                  .interactionId,
                               approved: approved,
                               feedback: feedback,
                             );
@@ -260,7 +277,8 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
                             _userScrolledUp = true;
                           });
                         }
-                      } else if (notification.direction == ScrollDirection.reverse) {
+                      } else if (notification.direction ==
+                          ScrollDirection.reverse) {
                         final pos = notification.metrics;
                         if ((pos.maxScrollExtent - pos.pixels) <= 30) {
                           if (_userScrolledUp) {
@@ -272,7 +290,8 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
                         }
                       }
                     } else if (notification is ScrollUpdateNotification) {
-                      if (notification.dragDetails != null && (notification.scrollDelta ?? 0) < 0) {
+                      if (notification.dragDetails != null &&
+                          (notification.scrollDelta ?? 0) < 0) {
                         if (!_userScrolledUp) {
                           setState(() {
                             _userScrolledUp = true;
@@ -384,9 +403,14 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
-                  color: isFailed ? CyberColors.red.withOpacity(0.12) : CyberColors.surfaceElevated,
+                  color: isFailed
+                      ? CyberColors.red.withOpacity(0.12)
+                      : CyberColors.surfaceElevated,
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(16),
                     topRight: Radius.circular(16),
@@ -394,7 +418,9 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
                     bottomRight: Radius.circular(4),
                   ),
                   border: Border.all(
-                    color: isFailed ? CyberColors.red.withOpacity(0.6) : CyberColors.cyan.withOpacity(0.3),
+                    color: isFailed
+                        ? CyberColors.red.withOpacity(0.6)
+                        : CyberColors.cyan.withOpacity(0.3),
                   ),
                 ),
                 child: Text(
@@ -420,20 +446,50 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
                       ),
                     ),
                     const SizedBox(width: 6),
-                    const Text('傳送中...', style: TextStyle(color: CyberColors.textMuted, fontSize: 11)),
+                    const Text(
+                      '傳送中...',
+                      style: TextStyle(
+                        color: CyberColors.textMuted,
+                        fontSize: 11,
+                      ),
+                    ),
                   ] else if (isFailed) ...[
-                    const Icon(Icons.error_outline, size: 14, color: CyberColors.red),
+                    const Icon(
+                      Icons.error_outline,
+                      size: 14,
+                      color: CyberColors.red,
+                    ),
                     const SizedBox(width: 4),
-                    const Text('發送失敗', style: TextStyle(color: CyberColors.red, fontSize: 11, fontWeight: FontWeight.bold)),
+                    const Text(
+                      '發送失敗',
+                      style: TextStyle(
+                        color: CyberColors.red,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(width: 8),
                     InkWell(
                       onTap: () => notifier.retrySendMessage(message.id),
                       borderRadius: BorderRadius.circular(4),
                       child: Container(
-                        constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                        constraints: const BoxConstraints(
+                          minHeight: 44,
+                          minWidth: 44,
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 4,
+                        ),
                         alignment: Alignment.center,
-                        child: const Text('重試 ↻', style: TextStyle(color: CyberColors.cyan, fontSize: 11, fontWeight: FontWeight.bold)),
+                        child: const Text(
+                          '重試 ↻',
+                          style: TextStyle(
+                            color: CyberColors.cyan,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -447,10 +503,23 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
                       },
                       borderRadius: BorderRadius.circular(4),
                       child: Container(
-                        constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                        constraints: const BoxConstraints(
+                          minHeight: 44,
+                          minWidth: 44,
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 4,
+                        ),
                         alignment: Alignment.center,
-                        child: const Text('編輯草稿 ✎', style: TextStyle(color: CyberColors.amber, fontSize: 11, fontWeight: FontWeight.bold)),
+                        child: const Text(
+                          '編輯草稿 ✎',
+                          style: TextStyle(
+                            color: CyberColors.amber,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -527,7 +596,10 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
                     if (uri.scheme == 'http' || uri.scheme == 'https') {
                       final canLaunch = await canLaunchUrl(uri);
                       if (canLaunch) {
-                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        await launchUrl(
+                          uri,
+                          mode: LaunchMode.externalApplication,
+                        );
                       }
                       return;
                     }
@@ -539,21 +611,38 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
                     ),
                   );
                 },
-                styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-                  p: const TextStyle(color: CyberColors.textPrimary, fontSize: 14, height: 1.5),
-                  h1: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                  h2: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                  h3: const TextStyle(color: CyberColors.cyan, fontSize: 15, fontWeight: FontWeight.bold),
-                  code: AppTheme.codeFont(
-                    color: CyberColors.cyan,
-                    fontSize: 12.5,
-                  ),
-                  codeblockDecoration: BoxDecoration(
-                    color: CyberColors.terminalBg,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: CyberColors.subtleBorder),
-                  ),
-                ),
+                styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context))
+                    .copyWith(
+                      p: const TextStyle(
+                        color: CyberColors.textPrimary,
+                        fontSize: 14,
+                        height: 1.5,
+                      ),
+                      h1: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      h2: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      h3: const TextStyle(
+                        color: CyberColors.cyan,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      code: AppTheme.codeFont(
+                        color: CyberColors.cyan,
+                        fontSize: 12.5,
+                      ),
+                      codeblockDecoration: BoxDecoration(
+                        color: CyberColors.terminalBg,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: CyberColors.subtleBorder),
+                      ),
+                    ),
               ),
             ),
         ],

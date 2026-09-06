@@ -17,10 +17,7 @@ class AnsiParser {
     if (!_ansiRegex.hasMatch(text)) {
       return TextSpan(
         text: text,
-        style: AppTheme.codeFont(
-          color: baseColor,
-          fontSize: fontSize,
-        ),
+        style: AppTheme.codeFont(color: baseColor, fontSize: fontSize),
       );
     }
 
@@ -33,13 +30,15 @@ class AnsiParser {
     for (final match in _ansiRegex.allMatches(text)) {
       if (match.start > lastIndex) {
         final segment = text.substring(lastIndex, match.start);
-        spans.add(TextSpan(
-          text: segment,
-          style: AppTheme.codeFont(
-            color: currentColor,
-            fontSize: fontSize,
-          ).copyWith(fontWeight: currentWeight),
-        ));
+        spans.add(
+          TextSpan(
+            text: segment,
+            style: AppTheme.codeFont(
+              color: currentColor,
+              fontSize: fontSize,
+            ).copyWith(fontWeight: currentWeight),
+          ),
+        );
       }
 
       final codes = match.group(1) ?? '';
@@ -77,7 +76,10 @@ class AnsiParser {
                 continue;
               } else if (mode == 5 && i + 2 < parts.length) {
                 final colorIdx = int.tryParse(parts[i + 2]) ?? 0;
-                currentColor = _parse256Color(colorIdx, defaultColor: baseColor);
+                currentColor = _parse256Color(
+                  colorIdx,
+                  defaultColor: baseColor,
+                );
                 i += 3;
                 continue;
               }
@@ -143,22 +145,21 @@ class AnsiParser {
     }
 
     if (lastIndex < text.length) {
-      spans.add(TextSpan(
-        text: text.substring(lastIndex),
-        style: AppTheme.codeFont(
-          color: currentColor,
-          fontSize: fontSize,
-        ).copyWith(fontWeight: currentWeight),
-      ));
+      spans.add(
+        TextSpan(
+          text: text.substring(lastIndex),
+          style: AppTheme.codeFont(
+            color: currentColor,
+            fontSize: fontSize,
+          ).copyWith(fontWeight: currentWeight),
+        ),
+      );
     }
 
     if (spans.isEmpty) {
       return TextSpan(
         text: text,
-        style: AppTheme.codeFont(
-          color: baseColor,
-          fontSize: fontSize,
-        ),
+        style: AppTheme.codeFont(color: baseColor, fontSize: fontSize),
       );
     }
 

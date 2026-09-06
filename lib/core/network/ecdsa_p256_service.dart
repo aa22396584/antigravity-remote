@@ -146,7 +146,9 @@ class P1363RawSignature {
 
   P1363RawSignature(this.rawBytes) {
     if (rawBytes.length != 64) {
-      throw ArgumentError('IEEE P1363 signature for P-256 must be exactly 64 bytes');
+      throw ArgumentError(
+        'IEEE P1363 signature for P-256 must be exactly 64 bytes',
+      );
     }
   }
 
@@ -159,10 +161,7 @@ class EcdsaP256Service {
   final ECPublicKey publicKey;
   final ECPrivateKey privateKey;
 
-  EcdsaP256Service({
-    required this.publicKey,
-    required this.privateKey,
-  });
+  EcdsaP256Service({required this.publicKey, required this.privateKey});
 
   /// 隨機生成新的 P-256 密鑰對 (純 Dart 實作，跨平台零原生依賴)
   factory EcdsaP256Service.generate() {
@@ -190,14 +189,43 @@ class EcdsaP256Service {
   /// 相容於 Apple CryptoKit 與 WebCrypto `crypto.subtle.exportKey('spki', key)`
   Uint8List getSpkiPublicKeyBytes() {
     const prefix = [
-      0x30, 0x59, 0x30, 0x13, 0x06, 0x07, 0x2a, 0x86,
-      0x48, 0xce, 0x3d, 0x02, 0x01, 0x06, 0x08, 0x2a,
-      0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07, 0x03,
-      0x42, 0x00, 0x04,
+      0x30,
+      0x59,
+      0x30,
+      0x13,
+      0x06,
+      0x07,
+      0x2a,
+      0x86,
+      0x48,
+      0xce,
+      0x3d,
+      0x02,
+      0x01,
+      0x06,
+      0x08,
+      0x2a,
+      0x86,
+      0x48,
+      0xce,
+      0x3d,
+      0x03,
+      0x01,
+      0x07,
+      0x03,
+      0x42,
+      0x00,
+      0x04,
     ];
 
-    final xBytes = DerSignature._bigIntToFixedBytes(publicKey.Q!.x!.toBigInteger()!, 32);
-    final yBytes = DerSignature._bigIntToFixedBytes(publicKey.Q!.y!.toBigInteger()!, 32);
+    final xBytes = DerSignature._bigIntToFixedBytes(
+      publicKey.Q!.x!.toBigInteger()!,
+      32,
+    );
+    final yBytes = DerSignature._bigIntToFixedBytes(
+      publicKey.Q!.y!.toBigInteger()!,
+      32,
+    );
 
     return Uint8List.fromList([...prefix, ...xBytes, ...yBytes]);
   }
@@ -211,7 +239,8 @@ class EcdsaP256Service {
   Uint8List sign(List<int> message) {
     final signer = ECDSASigner(SHA256Digest(), HMac(SHA256Digest(), 64));
     signer.init(true, PrivateKeyParameter(privateKey));
-    final sig = signer.generateSignature(Uint8List.fromList(message)) as ECSignature;
+    final sig =
+        signer.generateSignature(Uint8List.fromList(message)) as ECSignature;
 
     final rDer = DerSignature._encodeAsn1Integer(sig.r);
     final sDer = DerSignature._encodeAsn1Integer(sig.s);

@@ -1,7 +1,7 @@
 # Antigravity Remote Protocol Compatibility Specification
 
 **Audit Revision**: `2026-09-06`  
-**Client Version**: `1.0.0+1`  
+**Client Version**: `1.1.0+2`  
 **Host Target**: Google Antigravity / Jetski Remote Host Protocol  
 
 ---

@@ -43,10 +43,7 @@ class DualTransportManager {
   static const int _maxBackoffMs = 30000;
   final Random _random = Random();
 
-  DualTransportManager({
-    required this.relayClient,
-    this.meshClient,
-  }) {
+  DualTransportManager({required this.relayClient, this.meshClient}) {
     _init();
   }
 
@@ -115,17 +112,24 @@ class DualTransportManager {
 
     // 2. 背景嘗試發起 WebRTC P2P 網狀連線
     if (meshClient != null) {
-      unawaited(_attemptMeshUpgrade().then((connected) {
-        if (!connected && _autoReconnect) {
-          _scheduleMeshReconnect();
-        }
-      }));
+      unawaited(
+        _attemptMeshUpgrade().then((connected) {
+          if (!connected && _autoReconnect) {
+            _scheduleMeshReconnect();
+          }
+        }),
+      );
     }
   }
 
   void _scheduleMeshReconnect() {
-    if (!_autoReconnect || meshClient == null || _reconnectTimer?.isActive == true) return;
-    final expMs = (_baseBackoffMs * (1 << _reconnectAttempts.clamp(0, 5))).clamp(_baseBackoffMs, _maxBackoffMs);
+    if (!_autoReconnect ||
+        meshClient == null ||
+        _reconnectTimer?.isActive == true) {
+      return;
+    }
+    final expMs = (_baseBackoffMs * (1 << _reconnectAttempts.clamp(0, 5)))
+        .clamp(_baseBackoffMs, _maxBackoffMs);
     final jitterMax = (expMs * 0.2).toInt().clamp(1, 2000);
     final jitterMs = _random.nextInt(jitterMax);
     final delayMs = (expMs + jitterMs).clamp(_baseBackoffMs, _maxBackoffMs);

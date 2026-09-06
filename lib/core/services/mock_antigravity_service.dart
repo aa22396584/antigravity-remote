@@ -11,11 +11,13 @@ class MockAntigravityService {
 
   final _messageController = StreamController<CascadeMessage>.broadcast();
   final _terminalController = StreamController<TerminalChunk>.broadcast();
-  final _interactionController = StreamController<UserInteractionRequest>.broadcast();
+  final _interactionController =
+      StreamController<UserInteractionRequest>.broadcast();
 
   Stream<CascadeMessage> get messageStream => _messageController.stream;
   Stream<TerminalChunk> get terminalStream => _terminalController.stream;
-  Stream<UserInteractionRequest> get interactionStream => _interactionController.stream;
+  Stream<UserInteractionRequest> get interactionStream =>
+      _interactionController.stream;
 
   List<InstanceInfo> getMockInstances() {
     return [
@@ -75,7 +77,8 @@ class MockAntigravityService {
     // 思考串流微互動
     Timer(const Duration(milliseconds: 1200), () {
       currentAiMsg = currentAiMsg.copyWith(
-        thinking: '正在連線至本機 LanguageServer (ConnectRPC)...\n'
+        thinking:
+            '正在連線至本機 LanguageServer (ConnectRPC)...\n'
             '分析請求上下文與工作區檔案...\n'
             '檢測到專案為 Flutter 跨平台專案，準備執行語法檢查與測試套件...',
       );
@@ -92,7 +95,8 @@ class MockAntigravityService {
         description: '查找 lib/core/models 與 test/ 目錄下的 Dart 檔案',
         arguments: {'Pattern': '*.dart', 'SearchDirectory': 'lib/core/models'},
         status: StepStatus.completed,
-        output: 'Found 4 matching files:\n- lib/core/models/instance_info.dart\n- lib/core/models/user_interaction.dart\n- lib/core/models/trajectory_step.dart\n- lib/core/models/cascade_message.dart',
+        output:
+            'Found 4 matching files:\n- lib/core/models/instance_info.dart\n- lib/core/models/user_interaction.dart\n- lib/core/models/trajectory_step.dart\n- lib/core/models/cascade_message.dart',
         timestamp: DateTime.now(),
         executionDuration: const Duration(milliseconds: 320),
       );
@@ -134,10 +138,9 @@ class MockAntigravityService {
         timestamp: DateTime.now(),
       );
 
-      final steps = List<TrajectoryStep>.from(currentAiMsg.trajectorySteps)..add(step2);
-      currentAiMsg = currentAiMsg.copyWith(
-        trajectorySteps: steps,
-      );
+      final steps = List<TrajectoryStep>.from(currentAiMsg.trajectorySteps)
+        ..add(step2);
+      currentAiMsg = currentAiMsg.copyWith(trajectorySteps: steps);
       _messageController.add(currentAiMsg);
       _interactionController.add(interactionReq);
     });
@@ -151,25 +154,32 @@ class MockAntigravityService {
   }) {
     // 終端輸出模擬
     if (approved) {
-      _terminalController.add(TerminalChunk(
-        text: '\$ flutter test test/core/services/qr_parser_test.dart\n',
-        timestamp: DateTime.now(),
-      ));
+      _terminalController.add(
+        TerminalChunk(
+          text: '\$ flutter test test/core/services/qr_parser_test.dart\n',
+          timestamp: DateTime.now(),
+        ),
+      );
 
       Timer(const Duration(milliseconds: 400), () {
-        _terminalController.add(TerminalChunk(
-          text: '00:01 +0: loading test/core/services/qr_parser_test.dart\n',
-          timestamp: DateTime.now(),
-        ));
+        _terminalController.add(
+          TerminalChunk(
+            text: '00:01 +0: loading test/core/services/qr_parser_test.dart\n',
+            timestamp: DateTime.now(),
+          ),
+        );
       });
 
       Timer(const Duration(milliseconds: 900), () {
-        _terminalController.add(TerminalChunk(
-          text: '00:02 +1: QR code parser with Google AccountChooser URL\n'
-              '00:02 +2: QR code parser with Antigravity schema\n'
-              '00:02 +3: All tests passed!\n',
-          timestamp: DateTime.now(),
-        ));
+        _terminalController.add(
+          TerminalChunk(
+            text:
+                '00:02 +1: QR code parser with Google AccountChooser URL\n'
+                '00:02 +2: QR code parser with Antigravity schema\n'
+                '00:02 +3: All tests passed!\n',
+            timestamp: DateTime.now(),
+          ),
+        );
       });
 
       // 步驟 3：完成代碼修改呈現
@@ -183,7 +193,8 @@ class MockAntigravityService {
           arguments: {
             'TargetFile': 'lib/core/network/dual_transport_manager.dart',
           },
-          codeDiff: '@@ -35,6 +35,8 @@\n+    // 自動優先選擇 P2P 高速通道\n+    if (meshClient?.isConnected == true) return meshClient;\n     return relayClient;',
+          codeDiff:
+              '@@ -35,6 +35,8 @@\n+    // 自動優先選擇 P2P 高速通道\n+    if (meshClient?.isConnected == true) return meshClient;\n     return relayClient;',
           status: StepStatus.completed,
           output: 'Successfully applied code modification',
           timestamp: DateTime.now(),
@@ -194,7 +205,8 @@ class MockAntigravityService {
           id: 'msg-final-${DateTime.now().millisecondsSinceEpoch}',
           cascadeId: 'cascade-default',
           role: MessageRole.assistant,
-          content: '### ✅ 任務執行完成\n\n'
+          content:
+              '### ✅ 任務執行完成\n\n'
               '- **單元測試驗證**：所有 3 個測試已順利通過 (00:02)\n'
               '- **雙軌傳輸最佳化**：已成功提升 WebRTC P2P 連線權重，目前端到端延遲為 **14ms**\n'
               '- **桌面端狀態**：Antigravity LanguageServer 運作正常，隨時可接收後續控制指令。',
@@ -208,11 +220,13 @@ class MockAntigravityService {
         _messageController.add(finalMsg);
       });
     } else {
-      _terminalController.add(TerminalChunk(
-        text: '⚠️ 指令執行已被使用者拒絕: ${feedback ?? "User rejected"}\n',
-        isError: true,
-        timestamp: DateTime.now(),
-      ));
+      _terminalController.add(
+        TerminalChunk(
+          text: '⚠️ 指令執行已被使用者拒絕: ${feedback ?? "User rejected"}\n',
+          isError: true,
+          timestamp: DateTime.now(),
+        ),
+      );
 
       final rejectMsg = CascadeMessage(
         id: 'msg-reject-${DateTime.now().millisecondsSinceEpoch}',
@@ -228,19 +242,23 @@ class MockAntigravityService {
 
   /// 模擬使用者手動中止 / 取消當前任務 (Stop Task)
   void simulateCancelTask(String cascadeId) {
-    _messageController.add(CascadeMessage(
-      id: 'msg-cancel-${DateTime.now().millisecondsSinceEpoch}',
-      cascadeId: cascadeId,
-      role: MessageRole.assistant,
-      content: '🛑 **任務已由使用者手動中止**\n\n遠端執行已取消，工作區保持當前狀態。',
-      isStreaming: false,
-      timestamp: DateTime.now(),
-    ));
-    _terminalController.add(TerminalChunk(
-      text: '^C\n[任務已被使用者手動中止]\n',
-      isError: true,
-      timestamp: DateTime.now(),
-    ));
+    _messageController.add(
+      CascadeMessage(
+        id: 'msg-cancel-${DateTime.now().millisecondsSinceEpoch}',
+        cascadeId: cascadeId,
+        role: MessageRole.assistant,
+        content: '🛑 **任務已由使用者手動中止**\n\n遠端執行已取消，工作區保持當前狀態。',
+        isStreaming: false,
+        timestamp: DateTime.now(),
+      ),
+    );
+    _terminalController.add(
+      TerminalChunk(
+        text: '^C\n[任務已被使用者手動中止]\n',
+        isError: true,
+        timestamp: DateTime.now(),
+      ),
+    );
   }
 
   void dispose() {

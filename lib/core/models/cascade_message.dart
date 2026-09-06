@@ -1,18 +1,9 @@
 import 'trajectory_step.dart';
 
-enum MessageRole {
-  user,
-  assistant,
-  system,
-}
+enum MessageRole { user, assistant, system }
 
 /// 訊息交付狀態 (Issue #19)
-enum MessageDeliveryStatus {
-  sending,
-  confirmed,
-  failed,
-  unknown,
-}
+enum MessageDeliveryStatus { sending, confirmed, failed, unknown }
 
 class CascadeMessage {
   final String id;
@@ -86,7 +77,8 @@ class CascadeMessage {
   factory CascadeMessage.fromJson(Map<String, dynamic> json) {
     final rawRole = (json['role'] ?? json['message_role'])?.toString();
     final normRole = rawRole?.toLowerCase().replaceAll('_', '');
-    final durationMs = json['thinkingDurationMs'] ?? json['thinking_duration_ms'];
+    final durationMs =
+        json['thinkingDurationMs'] ?? json['thinking_duration_ms'];
     final rawIsThinking = json['isThinking'] ?? json['is_thinking'];
     final rawIsStreaming = json['isStreaming'] ?? json['is_streaming'];
     final rawDelivery = json['deliveryStatus']?.toString();
@@ -94,33 +86,41 @@ class CascadeMessage {
     return CascadeMessage(
       id: (json['id'] ?? json['message_id'] ?? json['msg_id']) as String? ?? '',
       cascadeId: (json['cascadeId'] ?? json['cascade_id']) as String? ?? '',
-      role: MessageRole.values.firstWhere(
-        (e) {
-          final target = e.name.toLowerCase();
-          return e.name == rawRole ||
-              target == normRole ||
-              (normRole != null && normRole.endsWith(target));
-        },
-        orElse: () => MessageRole.assistant,
-      ),
-      content: (json['content'] ?? json['text'] ?? json['message'])?.toString() ?? '',
+      role: MessageRole.values.firstWhere((e) {
+        final target = e.name.toLowerCase();
+        return e.name == rawRole ||
+            target == normRole ||
+            (normRole != null && normRole.endsWith(target));
+      }, orElse: () => MessageRole.assistant),
+      content:
+          (json['content'] ?? json['text'] ?? json['message'])?.toString() ??
+          '',
       thinking: (json['thinking'] ?? json['thinking_content'])?.toString(),
-      isThinking: rawIsThinking == true || rawIsThinking == 1 || rawIsThinking == 'true',
+      isThinking:
+          rawIsThinking == true ||
+          rawIsThinking == 1 ||
+          rawIsThinking == 'true',
       thinkingDuration: durationMs != null
           ? Duration(milliseconds: (durationMs as num).toInt())
           : null,
-      trajectorySteps: ((json['trajectorySteps'] ??
-                  json['trajectory_steps'] ??
-                  json['steps']) as List<dynamic>?)
+      trajectorySteps:
+          ((json['trajectorySteps'] ??
+                      json['trajectory_steps'] ??
+                      json['steps'])
+                  as List<dynamic>?)
               ?.whereType<Map>()
               .map((e) => TrajectoryStep.fromJson(Map<String, dynamic>.from(e)))
               .toList() ??
           const [],
-      isStreaming: rawIsStreaming == true || rawIsStreaming == 1 || rawIsStreaming == 'true',
+      isStreaming:
+          rawIsStreaming == true ||
+          rawIsStreaming == 1 ||
+          rawIsStreaming == 'true',
       timestamp: (json['timestamp'] ?? json['created_at']) != null
           ? DateTime.tryParse(
-                  (json['timestamp'] ?? json['created_at']) as String) ??
-              DateTime.now()
+                  (json['timestamp'] ?? json['created_at']) as String,
+                ) ??
+                DateTime.now()
           : DateTime.now(),
       deliveryStatus: MessageDeliveryStatus.values.firstWhere(
         (e) => e.name == rawDelivery,

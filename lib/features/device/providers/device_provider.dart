@@ -53,14 +53,20 @@ class DeviceState {
   }) {
     return DeviceState(
       devices: devices ?? this.devices,
-      activeDevice: clearActiveDevice ? null : (activeDevice ?? this.activeDevice),
+      activeDevice: clearActiveDevice
+          ? null
+          : (activeDevice ?? this.activeDevice),
       isConnecting: isConnecting ?? this.isConnecting,
-      connectionError: clearError ? null : (connectionError ?? this.connectionError),
+      connectionError: clearError
+          ? null
+          : (connectionError ?? this.connectionError),
       environment: environment ?? this.environment,
       accessToken: clearAccessToken ? null : (accessToken ?? this.accessToken),
       isDemoMode: isDemoMode ?? this.isDemoMode,
       activeTransport: activeTransport ?? this.activeTransport,
-      currentLatencyMs: clearLatency ? null : (currentLatencyMs ?? this.currentLatencyMs),
+      currentLatencyMs: clearLatency
+          ? null
+          : (currentLatencyMs ?? this.currentLatencyMs),
       bootState: bootState ?? this.bootState,
     );
   }
@@ -99,7 +105,9 @@ class DeviceNotifier extends Notifier<DeviceState> {
       final isDemo = storage.isDemoMode();
 
       final list = isDemo
-          ? (saved.isNotEmpty ? saved : MockAntigravityService.instance.getMockInstances())
+          ? (saved.isNotEmpty
+                ? saved
+                : MockAntigravityService.instance.getMockInstances())
           : saved;
       final defaultDev = list.isNotEmpty
           ? list.firstWhere((e) => e.isDefault, orElse: () => list.first)
@@ -155,10 +163,7 @@ class DeviceNotifier extends Notifier<DeviceState> {
   }
 
   Future<void> setAccessToken(String token) async {
-    state = state.copyWith(
-      accessToken: token,
-      clearAccessToken: token.isEmpty,
-    );
+    state = state.copyWith(accessToken: token, clearAccessToken: token.isEmpty);
     await _storageService?.setAccessToken(token);
     if (state.activeDevice != null && !state.isDemoMode) {
       await connectToDevice(state.activeDevice!);
@@ -192,7 +197,9 @@ class DeviceNotifier extends Notifier<DeviceState> {
     String? name,
     String? hostname,
   }) async {
-    final shortId = instanceId.length > 8 ? instanceId.substring(0, 8) : instanceId;
+    final shortId = instanceId.length > 8
+        ? instanceId.substring(0, 8)
+        : instanceId;
     final devName = name ?? hostname ?? 'Antigravity ($shortId)';
     final newDevice = InstanceInfo(
       instanceId: instanceId,
@@ -207,7 +214,10 @@ class DeviceNotifier extends Notifier<DeviceState> {
       isDefault: state.devices.isEmpty,
     );
 
-    final updated = [newDevice, ...state.devices.where((d) => d.instanceId != instanceId)];
+    final updated = [
+      newDevice,
+      ...state.devices.where((d) => d.instanceId != instanceId),
+    ];
 
     if (state.isDemoMode) {
       _demoTimer?.cancel();
@@ -233,9 +243,7 @@ class DeviceNotifier extends Notifier<DeviceState> {
       return true;
     }
 
-    state = state.copyWith(
-      devices: updated,
-    );
+    state = state.copyWith(devices: updated);
     await _storageService?.saveInstance(newDevice);
 
     return await connectToDevice(newDevice);
@@ -295,20 +303,21 @@ class DeviceNotifier extends Notifier<DeviceState> {
       final relayClient = CloudRelayClient(
         baseUrl: state.environment.url,
         googleAccessToken: token,
-        targetInstanceUuid: device.uuid.isNotEmpty ? device.uuid : device.instanceId,
+        targetInstanceUuid: device.uuid.isNotEmpty
+            ? device.uuid
+            : device.instanceId,
       );
 
       final meshClient = WebRtcMeshClient(
         baseUrl: state.environment.url,
         googleAccessToken: token,
-        targetInstanceUuid: device.uuid.isNotEmpty ? device.uuid : device.instanceId,
+        targetInstanceUuid: device.uuid.isNotEmpty
+            ? device.uuid
+            : device.instanceId,
       );
 
       final factory = ref.read(transportManagerFactoryProvider);
-      newManager = factory(
-        relayClient: relayClient,
-        meshClient: meshClient,
-      );
+      newManager = factory(relayClient: relayClient, meshClient: meshClient);
 
       if (_connectionEpoch != epoch) {
         await newManager.dispose();
@@ -346,7 +355,9 @@ class DeviceNotifier extends Notifier<DeviceState> {
         transport: newManager.currentTransport,
         latencyMs: newManager.currentLatencyMs,
       );
-      final newDevices = state.devices.map((d) => d.instanceId == device.instanceId ? connectedDev : d).toList();
+      final newDevices = state.devices
+          .map((d) => d.instanceId == device.instanceId ? connectedDev : d)
+          .toList();
 
       state = state.copyWith(
         devices: newDevices,
@@ -374,7 +385,9 @@ class DeviceNotifier extends Notifier<DeviceState> {
           status: InstanceConnectionStatus.disconnected,
           transport: TransportType.offline,
         );
-        final newDevices = state.devices.map((d) => d.instanceId == device.instanceId ? disconnectedDev : d).toList();
+        final newDevices = state.devices
+            .map((d) => d.instanceId == device.instanceId ? disconnectedDev : d)
+            .toList();
 
         state = state.copyWith(
           devices: newDevices,
@@ -396,7 +409,9 @@ class DeviceNotifier extends Notifier<DeviceState> {
 
   Future<void> removeDevice(String instanceId) async {
     ++_connectionEpoch;
-    final updated = state.devices.where((d) => d.instanceId != instanceId).toList();
+    final updated = state.devices
+        .where((d) => d.instanceId != instanceId)
+        .toList();
     final wasActive = state.activeDevice?.instanceId == instanceId;
     InstanceInfo? nextActive;
     if (wasActive) {
@@ -433,7 +448,7 @@ class DeviceNotifier extends Notifier<DeviceState> {
 
   String exportDiagnosticReport() {
     return DiagnosticService.instance.exportReport(
-      appVersion: '1.0.0+1',
+      appVersion: '1.1.0+2',
       isDemoMode: state.isDemoMode,
       environment: state.environment.name,
       deviceCount: state.devices.length,
@@ -447,16 +462,19 @@ final remoteControlServiceProvider = Provider<RemoteControlService>((ref) {
   return ref.watch(deviceProvider.notifier).remoteControlService;
 });
 
-typedef TransportManagerFactory = DualTransportManager Function({
-  required CloudRelayClient relayClient,
-  required WebRtcMeshClient meshClient,
+typedef TransportManagerFactory =
+    DualTransportManager Function({
+      required CloudRelayClient relayClient,
+      required WebRtcMeshClient meshClient,
+    });
+
+final transportManagerFactoryProvider = Provider<TransportManagerFactory>((
+  ref,
+) {
+  return ({required relayClient, required meshClient}) =>
+      DualTransportManager(relayClient: relayClient, meshClient: meshClient);
 });
 
-final transportManagerFactoryProvider = Provider<TransportManagerFactory>((ref) {
-  return ({required relayClient, required meshClient}) => DualTransportManager(
-        relayClient: relayClient,
-        meshClient: meshClient,
-      );
-});
-
-final deviceProvider = NotifierProvider<DeviceNotifier, DeviceState>(DeviceNotifier.new);
+final deviceProvider = NotifierProvider<DeviceNotifier, DeviceState>(
+  DeviceNotifier.new,
+);

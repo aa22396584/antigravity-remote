@@ -15,10 +15,7 @@ import 'qr_scanner_view.dart';
 class DeviceListView extends ConsumerWidget {
   final VoidCallback onOpenChat;
 
-  const DeviceListView({
-    super.key,
-    required this.onOpenChat,
-  });
+  const DeviceListView({super.key, required this.onOpenChat});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -36,7 +33,11 @@ class DeviceListView extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: CyberColors.cyan.withOpacity(0.5)),
               ),
-              child: const Icon(Icons.hub_outlined, color: CyberColors.cyan, size: 20),
+              child: const Icon(
+                Icons.hub_outlined,
+                color: CyberColors.cyan,
+                size: 20,
+              ),
             ),
             const SizedBox(width: 10),
             const Text('Antigravity 控制台'),
@@ -47,7 +48,9 @@ class DeviceListView extends ConsumerWidget {
             icon: const Icon(Icons.settings, color: CyberColors.textSecondary),
             onPressed: () {
               Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ConnectionSettingsView()),
+                MaterialPageRoute(
+                  builder: (_) => const ConnectionSettingsView(),
+                ),
               );
             },
             tooltip: '雲端與連線設定',
@@ -69,12 +72,20 @@ class DeviceListView extends ConsumerWidget {
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.warning_amber_rounded, color: CyberColors.amber, size: 18),
+                  Icon(
+                    Icons.warning_amber_rounded,
+                    color: CyberColors.amber,
+                    size: 18,
+                  ),
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       '儲存系統降級：安全憑證儲存初始化失敗，目前以記憶體隔離模式運行，關閉應用後設定將不會保留。',
-                      style: TextStyle(fontSize: 12.5, color: CyberColors.amber, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: CyberColors.amber,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
@@ -92,12 +103,20 @@ class DeviceListView extends ConsumerWidget {
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.info_outline, color: CyberColors.emerald, size: 18),
+                  Icon(
+                    Icons.info_outline,
+                    color: CyberColors.emerald,
+                    size: 18,
+                  ),
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       '展示模式：此模式下操作皆為離線模擬，不會控制真實電腦。',
-                      style: TextStyle(fontSize: 12.5, color: CyberColors.emerald, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: CyberColors.emerald,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
@@ -110,7 +129,11 @@ class DeviceListView extends ConsumerWidget {
               margin: const EdgeInsets.only(bottom: 16),
               child: Column(
                 children: [
-                  const Icon(Icons.devices_other, size: 48, color: CyberColors.textMuted),
+                  const Icon(
+                    Icons.devices_other,
+                    size: 48,
+                    color: CyberColors.textMuted,
+                  ),
                   const SizedBox(height: 12),
                   const Text(
                     '尚未配對任何裝置',
@@ -123,7 +146,10 @@ class DeviceListView extends ConsumerWidget {
                   const SizedBox(height: 6),
                   const Text(
                     '請點擊下方「掃描 QR 配對」或「手動新增」開始連線遠端 Antigravity 實體。',
-                    style: TextStyle(fontSize: 13, color: CyberColors.textSecondary),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: CyberColors.textSecondary,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -209,11 +235,17 @@ class DeviceListView extends ConsumerWidget {
                 text: '掃描 QR 配對',
                 icon: Icons.qr_code_scanner,
                 isOutlined: true,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 onPressed: () async {
-                  final result = await Navigator.of(context).push<ParsedRemoteTarget>(
-                    MaterialPageRoute(builder: (_) => const QrScannerView()),
-                  );
+                  final result = await Navigator.of(context)
+                      .push<ParsedRemoteTarget>(
+                        MaterialPageRoute(
+                          builder: (_) => const QrScannerView(),
+                        ),
+                      );
                   if (result != null && context.mounted) {
                     await _handleScanResult(context, ref, result);
                   }
@@ -230,20 +262,30 @@ class DeviceListView extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(vertical: 40),
                 child: Column(
                   children: [
-                    const Icon(Icons.devices_other, size: 48, color: CyberColors.textMuted),
+                    const Icon(
+                      Icons.devices_other,
+                      size: 48,
+                      color: CyberColors.textMuted,
+                    ),
                     const SizedBox(height: 12),
                     const Text(
                       '尚未配對任何 Antigravity 桌面端',
-                      style: TextStyle(color: CyberColors.textMuted, fontSize: 14),
+                      style: TextStyle(
+                        color: CyberColors.textMuted,
+                        fontSize: 14,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     CyberButton(
                       text: '立即掃碼配對',
                       icon: Icons.qr_code_scanner,
                       onPressed: () async {
-                        final result = await Navigator.of(context).push<ParsedRemoteTarget>(
-                          MaterialPageRoute(builder: (_) => const QrScannerView()),
-                        );
+                        final result = await Navigator.of(context)
+                            .push<ParsedRemoteTarget>(
+                              MaterialPageRoute(
+                                builder: (_) => const QrScannerView(),
+                              ),
+                            );
                         if (result != null && context.mounted) {
                           await _handleScanResult(context, ref, result);
                         }
@@ -257,7 +299,8 @@ class DeviceListView extends ConsumerWidget {
             for (final dev in deviceState.devices)
               DeviceCard(
                 device: dev,
-                isSelected: dev.instanceId == deviceState.activeDevice?.instanceId,
+                isSelected:
+                    dev.instanceId == deviceState.activeDevice?.instanceId,
                 onSelect: () => deviceNotifier.selectDevice(dev),
                 onDelete: () => deviceNotifier.removeDevice(dev.instanceId),
               ),
@@ -271,7 +314,11 @@ class DeviceListView extends ConsumerWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.info_outline, color: CyberColors.cyan, size: 18),
+                const Icon(
+                  Icons.info_outline,
+                  color: CyberColors.cyan,
+                  size: 18,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -315,11 +362,13 @@ class DeviceListView extends ConsumerWidget {
           SnackBar(
             content: Row(
               children: [
-                const Icon(Icons.check_circle, color: CyberColors.emerald, size: 20),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text('成功配對並切換設備: $shortId'),
+                const Icon(
+                  Icons.check_circle,
+                  color: CyberColors.emerald,
+                  size: 20,
                 ),
+                const SizedBox(width: 10),
+                Expanded(child: Text('成功配對並切換設備: $shortId')),
               ],
             ),
             backgroundColor: CyberColors.surfaceElevated,
@@ -336,11 +385,13 @@ class DeviceListView extends ConsumerWidget {
           SnackBar(
             content: Row(
               children: [
-                const Icon(Icons.warning_amber_rounded, color: CyberColors.amber, size: 20),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text('已儲存配對書籤，但連線失敗: $shortId'),
+                const Icon(
+                  Icons.warning_amber_rounded,
+                  color: CyberColors.amber,
+                  size: 20,
                 ),
+                const SizedBox(width: 10),
+                Expanded(child: Text('已儲存配對書籤，但連線失敗: $shortId')),
               ],
             ),
             backgroundColor: CyberColors.surfaceElevated,

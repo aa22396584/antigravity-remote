@@ -25,10 +25,8 @@ class UserApprovalDialog extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => UserApprovalDialog(
-        request: request,
-        onRespond: onRespond,
-      ),
+      builder: (ctx) =>
+          UserApprovalDialog(request: request, onRespond: onRespond),
     );
   }
 
@@ -71,7 +69,9 @@ class _UserApprovalDialogState extends State<UserApprovalDialog> {
   Widget build(BuildContext context) {
     final req = widget.request;
     final isDestructive = req.isDestructive || _isDestructive(req.actionTarget);
-    final isCommand = req.actionName == 'command' || req.type == UserInteractionType.askPermission;
+    final isCommand =
+        req.actionName == 'command' ||
+        req.type == UserInteractionType.askPermission;
 
     return SafeArea(
       top: false,
@@ -88,9 +88,7 @@ class _UserApprovalDialogState extends State<UserApprovalDialog> {
         decoration: const BoxDecoration(
           color: CyberColors.cardElevated,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          border: Border(
-            top: BorderSide(color: CyberColors.amber, width: 2),
-          ),
+          border: Border(top: BorderSide(color: CyberColors.amber, width: 2)),
         ),
         child: SingleChildScrollView(
           child: Column(
@@ -155,7 +153,10 @@ class _UserApprovalDialogState extends State<UserApprovalDialog> {
               // Destructive Warning Banner (Heuristic disclaimer - Issue #27)
               if (isDestructive) ...[
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   margin: const EdgeInsets.only(bottom: 12),
                   decoration: BoxDecoration(
                     color: CyberColors.red.withOpacity(0.15),
@@ -164,12 +165,20 @@ class _UserApprovalDialogState extends State<UserApprovalDialog> {
                   ),
                   child: const Row(
                     children: [
-                      Icon(Icons.warning_amber_rounded, color: CyberColors.red, size: 18),
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        color: CyberColors.red,
+                        size: 18,
+                      ),
                       SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           '注意：此操作包含潛在破壞性指令，請謹慎審查！',
-                          style: TextStyle(color: CyberColors.red, fontSize: 12, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            color: CyberColors.red,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ],
@@ -181,17 +190,23 @@ class _UserApprovalDialogState extends State<UserApprovalDialog> {
               if (req.description.isNotEmpty) ...[
                 Text(
                   req.description,
-                  style: const TextStyle(color: CyberColors.textSecondary, fontSize: 13),
+                  style: const TextStyle(
+                    color: CyberColors.textSecondary,
+                    fontSize: 13,
+                  ),
                 ),
                 const SizedBox(height: 10),
               ],
 
               // Code Diff presentation for patch/file edits (Issue #27)
-              if (req.actionTarget.contains('@@ ') || req.description.contains('@@ ')) ...[
+              if (req.actionTarget.contains('@@ ') ||
+                  req.description.contains('@@ ')) ...[
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: CodeDiffViewer(
-                    diff: req.actionTarget.contains('@@ ') ? req.actionTarget : req.description,
+                    diff: req.actionTarget.contains('@@ ')
+                        ? req.actionTarget
+                        : req.description,
                   ),
                 ),
               ],
@@ -204,7 +219,14 @@ class _UserApprovalDialogState extends State<UserApprovalDialog> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (isCommand)
-                      const Text('\$ ', style: TextStyle(color: CyberColors.emerald, fontSize: 13, fontWeight: FontWeight.bold)),
+                      const Text(
+                        '\$ ',
+                        style: TextStyle(
+                          color: CyberColors.emerald,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     Expanded(
                       child: SelectableText(
                         req.actionTarget,
@@ -215,10 +237,17 @@ class _UserApprovalDialogState extends State<UserApprovalDialog> {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.copy, size: 16, color: CyberColors.cyan),
+                      icon: const Icon(
+                        Icons.copy,
+                        size: 16,
+                        color: CyberColors.cyan,
+                      ),
                       onPressed: () => _copyTarget(context, req.actionTarget),
                       tooltip: '複製完整指令/目標',
-                      constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                      constraints: const BoxConstraints(
+                        minWidth: 44,
+                        minHeight: 44,
+                      ),
                     ),
                   ],
                 ),
@@ -229,23 +258,36 @@ class _UserApprovalDialogState extends State<UserApprovalDialog> {
               if (_showFeedbackInput) ...[
                 TextField(
                   controller: _feedbackController,
-                  style: const TextStyle(color: CyberColors.textPrimary, fontSize: 13),
+                  style: const TextStyle(
+                    color: CyberColors.textPrimary,
+                    fontSize: 13,
+                  ),
                   decoration: const InputDecoration(
                     hintText: '輸入指示或拒絕原因 (可選)...',
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 14),
               ] else ...[
                 TextButton.icon(
                   onPressed: () => setState(() => _showFeedbackInput = true),
-                  icon: const Icon(Icons.add_comment_outlined, size: 16, color: CyberColors.cyan),
+                  icon: const Icon(
+                    Icons.add_comment_outlined,
+                    size: 16,
+                    color: CyberColors.cyan,
+                  ),
                   label: const Text(
                     '+ 附加補充指示或拒絕說明',
                     style: TextStyle(color: CyberColors.cyan, fontSize: 12.5),
                   ),
                   style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 6,
+                    ),
                     minimumSize: const Size(0, 40),
                   ),
                 ),
@@ -261,10 +303,16 @@ class _UserApprovalDialogState extends State<UserApprovalDialog> {
                       color: CyberColors.red,
                       isOutlined: true,
                       icon: Icons.close,
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 12,
+                      ),
                       onPressed: () {
                         final feedback = _feedbackController.text.trim();
-                        widget.onRespond(false, feedback.isNotEmpty ? feedback : null);
+                        widget.onRespond(
+                          false,
+                          feedback.isNotEmpty ? feedback : null,
+                        );
                         Navigator.of(context).pop();
                       },
                     ),
@@ -275,10 +323,16 @@ class _UserApprovalDialogState extends State<UserApprovalDialog> {
                       text: '核准執行 (Approve)',
                       color: CyberColors.emerald,
                       icon: Icons.check,
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 12,
+                      ),
                       onPressed: () {
                         final feedback = _feedbackController.text.trim();
-                        widget.onRespond(true, feedback.isNotEmpty ? feedback : null);
+                        widget.onRespond(
+                          true,
+                          feedback.isNotEmpty ? feedback : null,
+                        );
                         Navigator.of(context).pop();
                       },
                     ),

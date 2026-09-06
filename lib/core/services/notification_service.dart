@@ -1,10 +1,6 @@
 import 'dart:async';
 
-enum NotificationType {
-  approvalNeeded,
-  taskCompleted,
-  taskFailed,
-}
+enum NotificationType { approvalNeeded, taskCompleted, taskFailed }
 
 class InAppNotification {
   final String id;

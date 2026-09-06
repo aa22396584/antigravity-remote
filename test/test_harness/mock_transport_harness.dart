@@ -13,7 +13,8 @@ class RecordedUnaryCall {
   RecordedUnaryCall({required this.rpcPath, required this.payload});
 
   String get payloadText => utf8.decode(payload);
-  Map<String, dynamic> get payloadJson => jsonDecode(payloadText) as Map<String, dynamic>;
+  Map<String, dynamic> get payloadJson =>
+      jsonDecode(payloadText) as Map<String, dynamic>;
 }
 
 class RecordedStreamCall {
@@ -39,13 +40,13 @@ class MockTransportHarness extends DualTransportManager {
   Future<Uint8List> Function(String rpcPath, Uint8List payload)? onCallUnary;
 
   MockTransportHarness()
-      : super(
-          relayClient: CloudRelayClient(
-            baseUrl: 'https://mock.googleapis.com',
-            googleAccessToken: 'mock-token',
-            targetInstanceUuid: 'mock-uuid',
-          ),
-        );
+    : super(
+        relayClient: CloudRelayClient(
+          baseUrl: 'https://mock.googleapis.com',
+          googleAccessToken: 'mock-token',
+          targetInstanceUuid: 'mock-uuid',
+        ),
+      );
 
   @override
   Future<void> connectAll() async {}
@@ -55,18 +56,27 @@ class MockTransportHarness extends DualTransportManager {
 
   @override
   Future<void> dispose() async {
-    if (!cascadeStreamController.isClosed) await cascadeStreamController.close();
-    if (!terminalStreamController.isClosed) await terminalStreamController.close();
+    if (!cascadeStreamController.isClosed) {
+      await cascadeStreamController.close();
+    }
+    if (!terminalStreamController.isClosed) {
+      await terminalStreamController.close();
+    }
   }
 
   @override
-  Future<Uint8List> callUnary(String rpcPath, Uint8List payload, {bool? isIdempotent}) async {
+  Future<Uint8List> callUnary(
+    String rpcPath,
+    Uint8List payload, {
+    bool? isIdempotent,
+  }) async {
     unaryCalls.add(RecordedUnaryCall(rpcPath: rpcPath, payload: payload));
     if (onCallUnary != null) {
       return onCallUnary!(rpcPath, payload);
     }
     if (unaryError != null) throw unaryError!;
-    return unaryResponsePayload ?? Uint8List.fromList(utf8.encode('{"status":"OK"}'));
+    return unaryResponsePayload ??
+        Uint8List.fromList(utf8.encode('{"status":"OK"}'));
   }
 
   @override

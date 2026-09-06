@@ -45,14 +45,18 @@ class DeviceCard extends StatelessWidget {
                       : CyberColors.surfaceElevated,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: isSelected ? CyberColors.cyan : CyberColors.subtleBorder,
+                    color: isSelected
+                        ? CyberColors.cyan
+                        : CyberColors.subtleBorder,
                     width: 1,
                   ),
                 ),
                 child: Icon(
                   Icons.laptop_mac,
                   size: 20,
-                  color: isSelected ? CyberColors.cyan : CyberColors.textSecondary,
+                  color: isSelected
+                      ? CyberColors.cyan
+                      : CyberColors.textSecondary,
                 ),
               ),
               const SizedBox(width: 12),
@@ -63,7 +67,9 @@ class DeviceCard extends StatelessWidget {
                     Text(
                       device.name,
                       style: TextStyle(
-                        color: isSelected ? Colors.white : CyberColors.textPrimary,
+                        color: isSelected
+                            ? Colors.white
+                            : CyberColors.textPrimary,
                         fontSize: 14.5,
                         fontWeight: FontWeight.w700,
                       ),
@@ -85,7 +91,11 @@ class DeviceCard extends StatelessWidget {
               ),
               if (onDelete != null)
                 IconButton(
-                  icon: const Icon(Icons.close, size: 18, color: CyberColors.textMuted),
+                  icon: const Icon(
+                    Icons.close,
+                    size: 18,
+                    color: CyberColors.textMuted,
+                  ),
                   onPressed: onDelete,
                   splashRadius: 18,
                   tooltip: '解除綁定',
@@ -106,7 +116,10 @@ class DeviceCard extends StatelessWidget {
                 children: [
                   if (isSelected) ...[
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: CyberColors.cyan.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(6),

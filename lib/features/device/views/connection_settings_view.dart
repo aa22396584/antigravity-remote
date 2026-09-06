@@ -11,10 +11,12 @@ class ConnectionSettingsView extends ConsumerStatefulWidget {
   const ConnectionSettingsView({super.key});
 
   @override
-  ConsumerState<ConnectionSettingsView> createState() => _ConnectionSettingsViewState();
+  ConsumerState<ConnectionSettingsView> createState() =>
+      _ConnectionSettingsViewState();
 }
 
-class _ConnectionSettingsViewState extends ConsumerState<ConnectionSettingsView> {
+class _ConnectionSettingsViewState
+    extends ConsumerState<ConnectionSettingsView> {
   late TextEditingController _tokenController;
   late String _tokenDraft;
   bool _obscureToken = true;
@@ -39,9 +41,7 @@ class _ConnectionSettingsViewState extends ConsumerState<ConnectionSettingsView>
     final deviceNotifier = ref.read(deviceProvider.notifier);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('連線與雲端設定'),
-      ),
+      appBar: AppBar(title: const Text('連線與雲端設定')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -57,12 +57,20 @@ class _ConnectionSettingsViewState extends ConsumerState<ConnectionSettingsView>
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.warning_amber_rounded, color: CyberColors.amber, size: 18),
+                  Icon(
+                    Icons.warning_amber_rounded,
+                    color: CyberColors.amber,
+                    size: 18,
+                  ),
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       '儲存系統降級：安全憑證儲存初始化失敗，目前以記憶體模式運行，設定將不會持久化保存。',
-                      style: TextStyle(fontSize: 12.5, color: CyberColors.amber, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: CyberColors.amber,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
@@ -70,7 +78,9 @@ class _ConnectionSettingsViewState extends ConsumerState<ConnectionSettingsView>
             ),
           // 1. Demo Mode Switch
           CyberCard(
-            borderColor: deviceState.isDemoMode ? CyberColors.emerald : CyberColors.subtleBorder,
+            borderColor: deviceState.isDemoMode
+                ? CyberColors.emerald
+                : CyberColors.subtleBorder,
             hasGlow: deviceState.isDemoMode,
             glowColor: CyberColors.emeraldGlow,
             child: Row(
@@ -81,7 +91,11 @@ class _ConnectionSettingsViewState extends ConsumerState<ConnectionSettingsView>
                     color: CyberColors.emerald.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.science, color: CyberColors.emerald, size: 22),
+                  child: const Icon(
+                    Icons.science,
+                    color: CyberColors.emerald,
+                    size: 22,
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -144,7 +158,10 @@ class _ConnectionSettingsViewState extends ConsumerState<ConnectionSettingsView>
                     onTap: () => deviceNotifier.setEnvironment(env),
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
                       margin: const EdgeInsets.only(bottom: 8),
                       decoration: BoxDecoration(
                         color: deviceState.environment == env
@@ -228,7 +245,10 @@ class _ConnectionSettingsViewState extends ConsumerState<ConnectionSettingsView>
                 const SizedBox(height: 8),
                 const Text(
                   '向 Google Cloud 閘道器認證。支援 Bearer Token 或手動匯入憑證。',
-                  style: TextStyle(fontSize: 12.5, color: CyberColors.textSecondary),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: CyberColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -237,7 +257,10 @@ class _ConnectionSettingsViewState extends ConsumerState<ConnectionSettingsView>
                   maxLines: 1,
                   enableSuggestions: false,
                   autocorrect: false,
-                  style: AppTheme.codeFont(color: CyberColors.textCode, fontSize: 12),
+                  style: AppTheme.codeFont(
+                    color: CyberColors.textCode,
+                    fontSize: 12,
+                  ),
                   decoration: InputDecoration(
                     hintText: 'ya29.a0AfH6SM...',
                     suffixIcon: IconButton(
@@ -246,7 +269,8 @@ class _ConnectionSettingsViewState extends ConsumerState<ConnectionSettingsView>
                         color: CyberColors.textSecondary,
                         size: 20,
                       ),
-                      onPressed: () => setState(() => _obscureToken = !_obscureToken),
+                      onPressed: () =>
+                          setState(() => _obscureToken = !_obscureToken),
                       tooltip: _obscureToken ? '顯示憑證' : '隱藏憑證',
                     ),
                   ),
@@ -259,11 +283,15 @@ class _ConnectionSettingsViewState extends ConsumerState<ConnectionSettingsView>
                   alignment: WrapAlignment.end,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    if (deviceState.accessToken != null && deviceState.accessToken!.isNotEmpty)
+                    if (deviceState.accessToken != null &&
+                        deviceState.accessToken!.isNotEmpty)
                       CyberButton(
                         text: '清除憑證 / 登出',
                         isOutlined: true,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                         onPressed: () async {
                           await deviceNotifier.logout();
                           _tokenController.clear();
@@ -283,9 +311,13 @@ class _ConnectionSettingsViewState extends ConsumerState<ConnectionSettingsView>
                       CyberButton(
                         text: '生成測試 Token',
                         isOutlined: true,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                         onPressed: () {
-                          final mockToken = 'mock-oauth-ya29.${DateTime.now().millisecondsSinceEpoch}';
+                          final mockToken =
+                              'mock-oauth-ya29.${DateTime.now().millisecondsSinceEpoch}';
                           _tokenController.text = mockToken;
                           setState(() => _tokenDraft = mockToken);
                           deviceNotifier.setAccessToken(mockToken);
@@ -293,7 +325,10 @@ class _ConnectionSettingsViewState extends ConsumerState<ConnectionSettingsView>
                       ),
                     CyberButton(
                       text: '儲存 Token',
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
                       onPressed: () async {
                         await deviceNotifier.setAccessToken(_tokenDraft);
                         if (context.mounted) {
@@ -340,7 +375,11 @@ class _ConnectionSettingsViewState extends ConsumerState<ConnectionSettingsView>
                   '• 軌道 1 (Cloud Relay)：調用 ProxyCommand / StreamProxyCommand，由 Google Cloud 轉發至桌面端，適用於各類 NAT 與跨網段環境。\n'
                   '• 軌道 2 (WebRTC P2P DataChannel)：基於 InitiateMeshSession、STUN/TURN、ECDSA P-256 挑戰回應，直接建立端到端加密資料串流。\n'
                   '• 資料分幀：5 位元組長度前綴 [0x00][Length][Payload]。',
-                  style: TextStyle(fontSize: 12.5, color: CyberColors.textSecondary, height: 1.5),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: CyberColors.textSecondary,
+                    height: 1.5,
+                  ),
                 ),
               ],
             ),
@@ -354,7 +393,11 @@ class _ConnectionSettingsViewState extends ConsumerState<ConnectionSettingsView>
               children: [
                 const Row(
                   children: [
-                    Icon(Icons.bug_report, size: 18, color: CyberColors.emerald),
+                    Icon(
+                      Icons.bug_report,
+                      size: 18,
+                      color: CyberColors.emerald,
+                    ),
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -371,7 +414,10 @@ class _ConnectionSettingsViewState extends ConsumerState<ConnectionSettingsView>
                 const SizedBox(height: 8),
                 const Text(
                   '匯出經安全去識別化與憑證遮蔽之連線診斷日誌，協助排除連線故障。',
-                  style: TextStyle(fontSize: 12.5, color: CyberColors.textSecondary),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: CyberColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 CyberButton(
@@ -379,7 +425,9 @@ class _ConnectionSettingsViewState extends ConsumerState<ConnectionSettingsView>
                   isOutlined: true,
                   icon: Icons.assignment_outlined,
                   onPressed: () {
-                    final report = ref.read(deviceProvider.notifier).exportDiagnosticReport();
+                    final report = ref
+                        .read(deviceProvider.notifier)
+                        .exportDiagnosticReport();
                     showDialog(
                       context: context,
                       builder: (ctx) => AlertDialog(
@@ -388,7 +436,10 @@ class _ConnectionSettingsViewState extends ConsumerState<ConnectionSettingsView>
                         content: SingleChildScrollView(
                           child: SelectableText(
                             report,
-                            style: AppTheme.codeFont(fontSize: 11, color: CyberColors.textCode),
+                            style: AppTheme.codeFont(
+                              fontSize: 11,
+                              color: CyberColors.textCode,
+                            ),
                           ),
                         ),
                         actions: [

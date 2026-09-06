@@ -25,7 +25,12 @@ class _TokenVaultCrypto {
     }
 
     final cipher = GCMBlockCipher(AESEngine());
-    final params = AEADParameters(KeyParameter(key), _macLengthBits, iv, Uint8List(0));
+    final params = AEADParameters(
+      KeyParameter(key),
+      _macLengthBits,
+      iv,
+      Uint8List(0),
+    );
     cipher.init(true, params);
 
     final input = Uint8List.fromList(utf8.encode(plaintext));
@@ -64,11 +69,7 @@ class _TokenVaultCrypto {
   }
 }
 
-enum BootState {
-  ready,
-  degraded,
-  failed,
-}
+enum BootState { ready, degraded, failed }
 
 class StorageService {
   static const _keyAccessToken = 'ag_access_token';
@@ -213,7 +214,9 @@ class StorageService {
     return rawList
         .map((str) {
           try {
-            return InstanceInfo.fromJson(jsonDecode(str) as Map<String, dynamic>);
+            return InstanceInfo.fromJson(
+              jsonDecode(str) as Map<String, dynamic>,
+            );
           } catch (_) {
             return null;
           }

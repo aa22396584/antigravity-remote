@@ -26,7 +26,10 @@ void main() {
       );
 
       final state = container.read(deviceProvider);
-      expect(state.devices.any((d) => d.instanceId == 'new-instance-8899'), isTrue);
+      expect(
+        state.devices.any((d) => d.instanceId == 'new-instance-8899'),
+        isTrue,
+      );
       expect(state.activeDevice?.instanceId, 'new-instance-8899');
       expect(state.activeDevice?.uuid, 'new-instance-8899');
       expect(state.activeDevice?.name, 'New Test Mac');
@@ -43,25 +46,31 @@ void main() {
       await notifier.removeDevice(initialActive!.instanceId);
 
       final state = container.read(deviceProvider);
-      expect(state.devices.any((d) => d.instanceId == initialActive.instanceId), isFalse);
+      expect(
+        state.devices.any((d) => d.instanceId == initialActive.instanceId),
+        isFalse,
+      );
       expect(state.activeDevice, isNotNull);
       expect(state.activeDevice!.instanceId, isNot(initialActive.instanceId));
     });
 
-    test('toggleDemoMode updates state and propagates to remoteControlService', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
+    test(
+      'toggleDemoMode updates state and propagates to remoteControlService',
+      () {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
 
-      final notifier = container.read(deviceProvider.notifier);
-      notifier.toggleDemoMode(false);
+        final notifier = container.read(deviceProvider.notifier);
+        notifier.toggleDemoMode(false);
 
-      expect(container.read(deviceProvider).isDemoMode, isFalse);
-      expect(notifier.remoteControlService.isDemoMode, isFalse);
+        expect(container.read(deviceProvider).isDemoMode, isFalse);
+        expect(notifier.remoteControlService.isDemoMode, isFalse);
 
-      notifier.toggleDemoMode(true);
-      expect(container.read(deviceProvider).isDemoMode, isTrue);
-      expect(notifier.remoteControlService.isDemoMode, isTrue);
-    });
+        notifier.toggleDemoMode(true);
+        expect(container.read(deviceProvider).isDemoMode, isTrue);
+        expect(notifier.remoteControlService.isDemoMode, isTrue);
+      },
+    );
 
     test('setEnvironment and setAccessToken update state', () {
       final container = ProviderContainer();

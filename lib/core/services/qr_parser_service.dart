@@ -71,7 +71,8 @@ class QrParserService {
       try {
         final decoded = jsonDecode(trimmed);
         if (decoded is Map<String, dynamic>) {
-          final idRaw = decoded['instanceId'] ??
+          final idRaw =
+              decoded['instanceId'] ??
               decoded['instance_id'] ??
               decoded['uuid'] ??
               decoded['id'];
@@ -82,22 +83,24 @@ class QrParserService {
               cascadeId: decoded['cascadeId'] is String
                   ? decoded['cascadeId'] as String
                   : (decoded['cascade_id'] is String
-                      ? decoded['cascade_id'] as String
-                      : (decoded['sessionId'] is String
-                          ? decoded['sessionId'] as String
-                          : (decoded['session_id'] is String
-                              ? decoded['session_id'] as String
-                              : null))),
+                        ? decoded['cascade_id'] as String
+                        : (decoded['sessionId'] is String
+                              ? decoded['sessionId'] as String
+                              : (decoded['session_id'] is String
+                                    ? decoded['session_id'] as String
+                                    : null))),
               hostname: decoded['hostname'] is String
                   ? decoded['hostname'] as String
                   : (decoded['host'] is String
-                      ? decoded['host'] as String
-                      : (decoded['remoteControlHostname'] is String
-                          ? decoded['remoteControlHostname'] as String
-                          : null)),
+                        ? decoded['host'] as String
+                        : (decoded['remoteControlHostname'] is String
+                              ? decoded['remoteControlHostname'] as String
+                              : null)),
               email: decoded['email'] is String
                   ? decoded['email'] as String
-                  : (decoded['Email'] is String ? decoded['Email'] as String : null),
+                  : (decoded['Email'] is String
+                        ? decoded['Email'] as String
+                        : null),
               rawSource: trimmed,
             );
           }
@@ -119,12 +122,15 @@ class QrParserService {
 
       // 2a. Google AccountChooser 格式或官方登入 redirect URL
       if (host == 'accounts.google.com') {
-        final email = uri.queryParameters['Email'] ??
+        final email =
+            uri.queryParameters['Email'] ??
             uri.queryParameters['email'] ??
             uri.queryParameters['authuser'];
         var continueUrl = uri.queryParameters['continue'];
 
-        if (continueUrl != null && continueUrl.isNotEmpty && continueUrl.length <= maxInputLength) {
+        if (continueUrl != null &&
+            continueUrl.isNotEmpty &&
+            continueUrl.length <= maxInputLength) {
           int decodeCount = 0;
           while (decodeCount < 3 &&
               (continueUrl!.contains('%3A') ||
@@ -156,11 +162,14 @@ class QrParserService {
 
       // 2b. 精確匹配 antigravity.google.com 網頁 Deep Link
       if (host == 'antigravity.google.com') {
-        String? email = uri.queryParameters['Email'] ?? uri.queryParameters['email'];
-        final hostname = uri.queryParameters['hostname'] ?? uri.queryParameters['host'];
+        String? email =
+            uri.queryParameters['Email'] ?? uri.queryParameters['email'];
+        final hostname =
+            uri.queryParameters['hostname'] ?? uri.queryParameters['host'];
 
         // instanceId 提取
-        String? instanceId = uri.queryParameters['instanceId'] ??
+        String? instanceId =
+            uri.queryParameters['instanceId'] ??
             uri.queryParameters['instance_id'] ??
             uri.queryParameters['id'] ??
             uri.queryParameters['uuid'];
@@ -171,7 +180,9 @@ class QrParserService {
           if (rIndex != -1 && pathSegments.length > rIndex + 1) {
             instanceId = pathSegments[rIndex + 1];
           } else {
-            final segs = pathSegments.where((s) => s.isNotEmpty && s != 'r' && s != 'c').toList();
+            final segs = pathSegments
+                .where((s) => s.isNotEmpty && s != 'r' && s != 'c')
+                .toList();
             if (segs.isNotEmpty) {
               instanceId = segs.last;
             }
@@ -179,7 +190,8 @@ class QrParserService {
         }
 
         // cascadeId 提取
-        String? cascadeId = uri.queryParameters['cascadeId'] ??
+        String? cascadeId =
+            uri.queryParameters['cascadeId'] ??
             uri.queryParameters['cascade_id'] ??
             uri.queryParameters['CascadeId'];
         final pParam = uri.queryParameters['p'];
@@ -209,25 +221,34 @@ class QrParserService {
     }
 
     // 3. 自定義 URL scheme: antigravity: 或 antigravity-remote:
-    if (trimmed.startsWith('antigravity:') || trimmed.startsWith('antigravity-remote:')) {
+    if (trimmed.startsWith('antigravity:') ||
+        trimmed.startsWith('antigravity-remote:')) {
       try {
         String normalized = trimmed;
         if (!normalized.contains('://')) {
           final colonIdx = normalized.indexOf(':');
-          final rest = normalized.substring(colonIdx + 1).replaceFirst(RegExp(r'^/+'), '');
+          final rest = normalized
+              .substring(colonIdx + 1)
+              .replaceFirst(RegExp(r'^/+'), '');
           normalized = '${normalized.substring(0, colonIdx)}://$rest';
         }
 
         final customUri = Uri.parse(normalized);
-        if (customUri.scheme != 'antigravity' && customUri.scheme != 'antigravity-remote') {
+        if (customUri.scheme != 'antigravity' &&
+            customUri.scheme != 'antigravity-remote') {
           return null;
         }
 
-        String? email = customUri.queryParameters['Email'] ?? customUri.queryParameters['email'];
-        final hostname = customUri.queryParameters['hostname'] ?? customUri.queryParameters['host'];
+        String? email =
+            customUri.queryParameters['Email'] ??
+            customUri.queryParameters['email'];
+        final hostname =
+            customUri.queryParameters['hostname'] ??
+            customUri.queryParameters['host'];
 
         // cascadeId 提取
-        String? cascadeId = customUri.queryParameters['cascadeId'] ??
+        String? cascadeId =
+            customUri.queryParameters['cascadeId'] ??
             customUri.queryParameters['cascade_id'] ??
             customUri.queryParameters['CascadeId'];
         final pParam = customUri.queryParameters['p'];
@@ -242,14 +263,18 @@ class QrParserService {
         }
 
         // instanceId 提取
-        String? instanceId = customUri.queryParameters['instanceId'] ??
+        String? instanceId =
+            customUri.queryParameters['instanceId'] ??
             customUri.queryParameters['instance_id'] ??
             customUri.queryParameters['id'] ??
             customUri.queryParameters['uuid'];
 
         if (instanceId == null || instanceId.isEmpty) {
           final segs = customUri.pathSegments
-              .where((s) => s.isNotEmpty && s != 'r' && s != 'remote' && s != 'connect')
+              .where(
+                (s) =>
+                    s.isNotEmpty && s != 'r' && s != 'remote' && s != 'connect',
+              )
               .toList();
           if (segs.isNotEmpty) {
             instanceId = segs.last;
@@ -276,10 +301,7 @@ class QrParserService {
 
     // 4. 純 UUID 或合法 Instance ID 字串
     if (_validIdPattern.hasMatch(trimmed)) {
-      return ParsedRemoteTarget(
-        instanceId: trimmed,
-        rawSource: trimmed,
-      );
+      return ParsedRemoteTarget(instanceId: trimmed, rawSource: trimmed);
     }
 
     return null;

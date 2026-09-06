@@ -124,39 +124,79 @@ class _TerminalConsoleCardState extends State<TerminalConsoleCard> {
             decoration: const BoxDecoration(
               color: CyberColors.surface,
               borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
-              border: Border(bottom: BorderSide(color: CyberColors.subtleBorder)),
+              border: Border(
+                bottom: BorderSide(color: CyberColors.subtleBorder),
+              ),
             ),
             child: Row(
               children: [
                 // Mac terminal traffic dots
                 Row(
                   children: [
-                    Container(width: 9, height: 9, decoration: const BoxDecoration(color: CyberColors.red, shape: BoxShape.circle)),
+                    Container(
+                      width: 9,
+                      height: 9,
+                      decoration: const BoxDecoration(
+                        color: CyberColors.red,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
                     const SizedBox(width: 5),
-                    Container(width: 9, height: 9, decoration: const BoxDecoration(color: CyberColors.amber, shape: BoxShape.circle)),
+                    Container(
+                      width: 9,
+                      height: 9,
+                      decoration: const BoxDecoration(
+                        color: CyberColors.amber,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
                     const SizedBox(width: 5),
-                    Container(width: 9, height: 9, decoration: const BoxDecoration(color: CyberColors.emerald, shape: BoxShape.circle)),
+                    Container(
+                      width: 9,
+                      height: 9,
+                      decoration: const BoxDecoration(
+                        color: CyberColors.emerald,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(width: 10),
                 const Expanded(
                   child: Text(
                     'bash / zsh - Remote Terminal Output',
-                    style: TextStyle(color: CyberColors.textMuted, fontSize: 11.5),
+                    style: TextStyle(
+                      color: CyberColors.textMuted,
+                      fontSize: 11.5,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.copy_all, size: 16, color: CyberColors.textMuted),
+                  icon: const Icon(
+                    Icons.copy_all,
+                    size: 16,
+                    color: CyberColors.textMuted,
+                  ),
                   onPressed: _copyLogs,
                   tooltip: '複製全部終端日誌',
-                  constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                  constraints: const BoxConstraints(
+                    minWidth: 44,
+                    minHeight: 44,
+                  ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.clear_all, size: 16, color: CyberColors.textMuted),
+                  icon: const Icon(
+                    Icons.clear_all,
+                    size: 16,
+                    color: CyberColors.textMuted,
+                  ),
                   onPressed: widget.onClear,
                   tooltip: '清空終端畫面',
-                  constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                  constraints: const BoxConstraints(
+                    minWidth: 44,
+                    minHeight: 44,
+                  ),
                 ),
               ],
             ),
@@ -174,7 +214,8 @@ class _TerminalConsoleCardState extends State<TerminalConsoleCard> {
                         if (!_userScrolledUp) {
                           setState(() => _userScrolledUp = true);
                         }
-                      } else if (notification.direction == ScrollDirection.reverse) {
+                      } else if (notification.direction ==
+                          ScrollDirection.reverse) {
                         final pos = notification.metrics;
                         if ((pos.maxScrollExtent - pos.pixels) <= 30) {
                           if (_userScrolledUp) {
@@ -183,7 +224,8 @@ class _TerminalConsoleCardState extends State<TerminalConsoleCard> {
                         }
                       }
                     } else if (notification is ScrollUpdateNotification) {
-                      if (notification.dragDetails != null && (notification.scrollDelta ?? 0) < 0) {
+                      if (notification.dragDetails != null &&
+                          (notification.scrollDelta ?? 0) < 0) {
                         if (!_userScrolledUp) {
                           setState(() => _userScrolledUp = true);
                         }
@@ -215,7 +257,9 @@ class _TerminalConsoleCardState extends State<TerminalConsoleCard> {
                         return SelectableText.rich(
                           AnsiParser.parseToSpan(
                             chunk.text,
-                            defaultColor: chunk.isError ? CyberColors.red : CyberColors.terminalText,
+                            defaultColor: chunk.isError
+                                ? CyberColors.red
+                                : CyberColors.terminalText,
                             fontSize: 12,
                           ),
                         );
@@ -231,12 +275,20 @@ class _TerminalConsoleCardState extends State<TerminalConsoleCard> {
                       onTap: () => _scrollToBottom(force: true),
                       borderRadius: BorderRadius.circular(16),
                       child: Container(
-                        constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        constraints: const BoxConstraints(
+                          minHeight: 44,
+                          minWidth: 44,
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: CyberColors.surfaceElevated,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: CyberColors.cyan.withOpacity(0.6)),
+                          border: Border.all(
+                            color: CyberColors.cyan.withOpacity(0.6),
+                          ),
                           boxShadow: [
                             BoxShadow(
                               color: CyberColors.cyan.withOpacity(0.2),
@@ -247,9 +299,20 @@ class _TerminalConsoleCardState extends State<TerminalConsoleCard> {
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.arrow_downward, size: 14, color: CyberColors.cyan),
+                            Icon(
+                              Icons.arrow_downward,
+                              size: 14,
+                              color: CyberColors.cyan,
+                            ),
                             SizedBox(width: 4),
-                            Text('回到底部', style: TextStyle(color: CyberColors.cyan, fontSize: 11, fontWeight: FontWeight.bold)),
+                            Text(
+                              '回到底部',
+                              style: TextStyle(
+                                color: CyberColors.cyan,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -325,14 +388,26 @@ class _TerminalConsoleCardState extends State<TerminalConsoleCard> {
                 color: CyberColors.surfaceElevated,
                 child: Row(
                   children: [
-                    const Text('➜ ', style: TextStyle(color: CyberColors.cyan, fontWeight: FontWeight.bold)),
+                    const Text(
+                      '➜ ',
+                      style: TextStyle(
+                        color: CyberColors.cyan,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     Expanded(
                       child: TextField(
                         controller: _inputController,
-                        style: AppTheme.codeFont(color: Colors.white, fontSize: 13),
+                        style: AppTheme.codeFont(
+                          color: Colors.white,
+                          fontSize: 13,
+                        ),
                         decoration: const InputDecoration(
                           hintText: '輸入指令並發送至本機終端...',
-                          hintStyle: TextStyle(color: CyberColors.textMuted, fontSize: 12),
+                          hintStyle: TextStyle(
+                            color: CyberColors.textMuted,
+                            fontSize: 12,
+                          ),
                           isDense: true,
                           contentPadding: EdgeInsets.symmetric(vertical: 8),
                           border: InputBorder.none,
@@ -343,9 +418,16 @@ class _TerminalConsoleCardState extends State<TerminalConsoleCard> {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.send, size: 16, color: CyberColors.cyan),
+                      icon: const Icon(
+                        Icons.send,
+                        size: 16,
+                        color: CyberColors.cyan,
+                      ),
                       onPressed: _submit,
-                      constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                      constraints: const BoxConstraints(
+                        minWidth: 44,
+                        minHeight: 44,
+                      ),
                       tooltip: '發送按鍵',
                     ),
                   ],
@@ -374,10 +456,14 @@ class _TerminalConsoleCardState extends State<TerminalConsoleCard> {
           alignment: Alignment.center,
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
-            color: isRed ? CyberColors.red.withOpacity(0.15) : CyberColors.surfaceElevated,
+            color: isRed
+                ? CyberColors.red.withOpacity(0.15)
+                : CyberColors.surfaceElevated,
             borderRadius: BorderRadius.circular(6),
             border: Border.all(
-              color: isRed ? CyberColors.red.withOpacity(0.4) : CyberColors.subtleBorder,
+              color: isRed
+                  ? CyberColors.red.withOpacity(0.4)
+                  : CyberColors.subtleBorder,
             ),
           ),
           child: Text(

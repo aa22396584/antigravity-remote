@@ -28,7 +28,8 @@ class CyberButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final effectiveColor = color ?? CyberColors.cyan;
-    final effectiveTextColor = textColor ?? (isOutlined ? effectiveColor : Colors.black);
+    final effectiveTextColor =
+        textColor ?? (isOutlined ? effectiveColor : Colors.black);
 
     final child = Row(
       mainAxisSize: MainAxisSize.min,

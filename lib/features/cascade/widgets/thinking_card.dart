@@ -103,12 +103,16 @@ class _ThinkingCardState extends State<ThinkingCard>
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: CyberColors.violet.withOpacity(
-                            widget.isThinking ? 0.25 * _pulseAnimation.value : 0.15,
+                            widget.isThinking
+                                ? 0.25 * _pulseAnimation.value
+                                : 0.15,
                           ),
                           boxShadow: widget.isThinking
                               ? [
                                   BoxShadow(
-                                    color: CyberColors.violet.withOpacity(0.5 * _pulseAnimation.value),
+                                    color: CyberColors.violet.withOpacity(
+                                      0.5 * _pulseAnimation.value,
+                                    ),
                                     blurRadius: 8,
                                   ),
                                 ]
@@ -134,7 +138,9 @@ class _ThinkingCardState extends State<ThinkingCard>
                   ),
                   const Spacer(),
                   Icon(
-                    _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    _isExpanded
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
                     size: 18,
                     color: CyberColors.textMuted,
                   ),

@@ -14,7 +14,8 @@ class AntigravityRemoteApp extends ConsumerStatefulWidget {
   const AntigravityRemoteApp({super.key});
 
   @override
-  ConsumerState<AntigravityRemoteApp> createState() => _AntigravityRemoteAppState();
+  ConsumerState<AntigravityRemoteApp> createState() =>
+      _AntigravityRemoteAppState();
 }
 
 class _AntigravityRemoteAppState extends ConsumerState<AntigravityRemoteApp> {
@@ -30,13 +31,9 @@ class _AntigravityRemoteAppState extends ConsumerState<AntigravityRemoteApp> {
   void initState() {
     super.initState();
     _pages = [
-      CascadeChatView(
-        onOpenTerminal: () => setState(() => _currentIndex = 1),
-      ),
+      CascadeChatView(onOpenTerminal: () => setState(() => _currentIndex = 1)),
       const TerminalMonitorView(),
-      DeviceListView(
-        onOpenChat: () => setState(() => _currentIndex = 0),
-      ),
+      DeviceListView(onOpenChat: () => setState(() => _currentIndex = 0)),
     ];
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initDeepLinks();
@@ -50,7 +47,9 @@ class _AntigravityRemoteAppState extends ConsumerState<AntigravityRemoteApp> {
 
   void _onDeepLinkTarget(ParsedRemoteTarget target) {
     // 1. 自動綁定 / 切換設備
-    ref.read(deviceProvider.notifier).addDevice(
+    ref
+        .read(deviceProvider.notifier)
+        .addDevice(
           instanceId: target.instanceId,
           name: target.email != null ? 'Antigravity (${target.email})' : null,
           hostname: target.hostname,
@@ -76,7 +75,11 @@ class _AntigravityRemoteAppState extends ConsumerState<AntigravityRemoteApp> {
         SnackBar(
           content: Row(
             children: [
-              const Icon(Icons.check_circle, color: CyberColors.emerald, size: 20),
+              const Icon(
+                Icons.check_circle,
+                color: CyberColors.emerald,
+                size: 20,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -108,12 +111,18 @@ class _AntigravityRemoteAppState extends ConsumerState<AntigravityRemoteApp> {
       theme: AppTheme.darkTheme,
       home: CallbackShortcuts(
         bindings: {
-          const SingleActivator(LogicalKeyboardKey.digit1, control: true): () => setState(() => _currentIndex = 0),
-          const SingleActivator(LogicalKeyboardKey.digit1, meta: true): () => setState(() => _currentIndex = 0),
-          const SingleActivator(LogicalKeyboardKey.digit2, control: true): () => setState(() => _currentIndex = 1),
-          const SingleActivator(LogicalKeyboardKey.digit2, meta: true): () => setState(() => _currentIndex = 1),
-          const SingleActivator(LogicalKeyboardKey.digit3, control: true): () => setState(() => _currentIndex = 2),
-          const SingleActivator(LogicalKeyboardKey.digit3, meta: true): () => setState(() => _currentIndex = 2),
+          const SingleActivator(LogicalKeyboardKey.digit1, control: true): () =>
+              setState(() => _currentIndex = 0),
+          const SingleActivator(LogicalKeyboardKey.digit1, meta: true): () =>
+              setState(() => _currentIndex = 0),
+          const SingleActivator(LogicalKeyboardKey.digit2, control: true): () =>
+              setState(() => _currentIndex = 1),
+          const SingleActivator(LogicalKeyboardKey.digit2, meta: true): () =>
+              setState(() => _currentIndex = 1),
+          const SingleActivator(LogicalKeyboardKey.digit3, control: true): () =>
+              setState(() => _currentIndex = 2),
+          const SingleActivator(LogicalKeyboardKey.digit3, meta: true): () =>
+              setState(() => _currentIndex = 2),
         },
         child: Builder(
           builder: (context) {
@@ -139,8 +148,12 @@ class _AntigravityRemoteAppState extends ConsumerState<AntigravityRemoteApp> {
                       selectedIndex: _currentIndex,
                       backgroundColor: CyberColors.surface,
                       indicatorColor: CyberColors.cyan.withOpacity(0.2),
-                      selectedIconTheme: const IconThemeData(color: CyberColors.cyan),
-                      unselectedIconTheme: const IconThemeData(color: CyberColors.textMuted),
+                      selectedIconTheme: const IconThemeData(
+                        color: CyberColors.cyan,
+                      ),
+                      unselectedIconTheme: const IconThemeData(
+                        color: CyberColors.textMuted,
+                      ),
                       selectedLabelTextStyle: const TextStyle(
                         color: CyberColors.cyan,
                         fontWeight: FontWeight.bold,
@@ -157,9 +170,15 @@ class _AntigravityRemoteAppState extends ConsumerState<AntigravityRemoteApp> {
                           decoration: BoxDecoration(
                             color: CyberColors.cyan.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: CyberColors.cyan.withOpacity(0.5)),
+                            border: Border.all(
+                              color: CyberColors.cyan.withOpacity(0.5),
+                            ),
                           ),
-                          child: const Icon(Icons.hub, color: CyberColors.cyan, size: 24),
+                          child: const Icon(
+                            Icons.hub,
+                            color: CyberColors.cyan,
+                            size: 24,
+                          ),
                         ),
                       ),
                       onDestinationSelected: (index) {
@@ -184,7 +203,10 @@ class _AntigravityRemoteAppState extends ConsumerState<AntigravityRemoteApp> {
                         ),
                       ],
                     ),
-                    const VerticalDivider(width: 1, color: CyberColors.subtleBorder),
+                    const VerticalDivider(
+                      width: 1,
+                      color: CyberColors.subtleBorder,
+                    ),
                     Expanded(child: contentStack),
                   ],
                 ),
@@ -200,36 +222,57 @@ class _AntigravityRemoteAppState extends ConsumerState<AntigravityRemoteApp> {
                   : Container(
                       decoration: const BoxDecoration(
                         border: Border(
-                          top: BorderSide(color: CyberColors.subtleBorder, width: 1),
+                          top: BorderSide(
+                            color: CyberColors.subtleBorder,
+                            width: 1,
+                          ),
                         ),
                       ),
                       child: NavigationBar(
-                  selectedIndex: _currentIndex,
-                  backgroundColor: CyberColors.surface,
-                  indicatorColor: CyberColors.cyan.withOpacity(0.2),
-                  height: 64,
-                  onDestinationSelected: (index) {
-                    setState(() => _currentIndex = index);
-                  },
-                  destinations: const [
-                    NavigationDestination(
-                      icon: Icon(Icons.chat_bubble_outline, color: CyberColors.textMuted),
-                      selectedIcon: Icon(Icons.chat_bubble, color: CyberColors.cyan),
-                      label: '工作區',
+                        selectedIndex: _currentIndex,
+                        backgroundColor: CyberColors.surface,
+                        indicatorColor: CyberColors.cyan.withOpacity(0.2),
+                        height: 64,
+                        onDestinationSelected: (index) {
+                          setState(() => _currentIndex = index);
+                        },
+                        destinations: const [
+                          NavigationDestination(
+                            icon: Icon(
+                              Icons.chat_bubble_outline,
+                              color: CyberColors.textMuted,
+                            ),
+                            selectedIcon: Icon(
+                              Icons.chat_bubble,
+                              color: CyberColors.cyan,
+                            ),
+                            label: '工作區',
+                          ),
+                          NavigationDestination(
+                            icon: Icon(
+                              Icons.terminal_outlined,
+                              color: CyberColors.textMuted,
+                            ),
+                            selectedIcon: Icon(
+                              Icons.terminal,
+                              color: CyberColors.cyan,
+                            ),
+                            label: '終端輸出',
+                          ),
+                          NavigationDestination(
+                            icon: Icon(
+                              Icons.devices_outlined,
+                              color: CyberColors.textMuted,
+                            ),
+                            selectedIcon: Icon(
+                              Icons.devices,
+                              color: CyberColors.cyan,
+                            ),
+                            label: '設備中樞',
+                          ),
+                        ],
+                      ),
                     ),
-                    NavigationDestination(
-                      icon: Icon(Icons.terminal_outlined, color: CyberColors.textMuted),
-                      selectedIcon: Icon(Icons.terminal, color: CyberColors.cyan),
-                      label: '終端輸出',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.devices_outlined, color: CyberColors.textMuted),
-                      selectedIcon: Icon(Icons.devices, color: CyberColors.cyan),
-                      label: '設備中樞',
-                    ),
-                  ],
-                ),
-              ),
             );
           },
         ),

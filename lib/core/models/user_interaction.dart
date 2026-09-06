@@ -1,15 +1,6 @@
-enum UserInteractionType {
-  askPermission,
-  askQuestion,
-  custom,
-}
+enum UserInteractionType { askPermission, askQuestion, custom }
 
-enum InteractionStatus {
-  pending,
-  approved,
-  rejected,
-  timedOut,
-}
+enum InteractionStatus { pending, approved, rejected, timedOut }
 
 class UserInteractionRequest {
   final String interactionId;
@@ -87,7 +78,8 @@ class UserInteractionRequest {
 
   factory UserInteractionRequest.fromJson(Map<String, dynamic> json) {
     final rawType = (json['type'] ?? json['interaction_type'])?.toString();
-    final rawStatus = (json['status'] ?? json['interaction_status'])?.toString();
+    final rawStatus = (json['status'] ?? json['interaction_status'])
+        ?.toString();
     final normType = rawType?.toLowerCase().replaceAll('_', '');
     final normStatus = rawStatus?.toLowerCase().replaceAll('_', '');
 
@@ -95,51 +87,48 @@ class UserInteractionRequest {
     final isDestruct = json['isDestructive'] ?? json['is_destructive'];
 
     return UserInteractionRequest(
-      interactionId: (json['interactionId'] ??
-              json['interaction_id'] ??
-              json['id']) as String? ??
+      interactionId:
+          (json['interactionId'] ?? json['interaction_id'] ?? json['id'])
+              as String? ??
           '',
-      type: UserInteractionType.values.firstWhere(
-        (e) {
-          final target = e.name.toLowerCase();
-          return e.name == rawType ||
-              target == normType ||
-              (normType != null && normType.endsWith(target));
-        },
-        orElse: () => UserInteractionType.askPermission,
-      ),
+      type: UserInteractionType.values.firstWhere((e) {
+        final target = e.name.toLowerCase();
+        return e.name == rawType ||
+            target == normType ||
+            (normType != null && normType.endsWith(target));
+      }, orElse: () => UserInteractionType.askPermission),
       title: (json['title'] ?? json['request_title']) as String? ?? '請求授權',
       description: json['description'] as String? ?? '',
-      actionTarget: (json['actionTarget'] ??
-              json['action_target'] ??
-              json['target']) as String? ??
+      actionTarget:
+          (json['actionTarget'] ?? json['action_target'] ?? json['target'])
+              as String? ??
           '',
-      actionName: (json['actionName'] ??
-              json['action_name'] ??
-              json['action']) as String? ??
+      actionName:
+          (json['actionName'] ?? json['action_name'] ?? json['action'])
+              as String? ??
           'command',
-      options: (json['options'] as List<dynamic>?)
+      options:
+          (json['options'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
           const [],
       isMultiSelect: isMulti == true || isMulti == 1 || isMulti == 'true',
-      isDestructive: isDestruct == true || isDestruct == 1 || isDestruct == 'true',
-      status: InteractionStatus.values.firstWhere(
-        (e) {
-          final target = e.name.toLowerCase();
-          return e.name == rawStatus ||
-              target == normStatus ||
-              (normStatus != null && normStatus.endsWith(target));
-        },
-        orElse: () => InteractionStatus.pending,
-      ),
-      userFeedback: (json['userFeedback'] ??
-              json['user_feedback'] ??
-              json['feedback']) as String?,
+      isDestructive:
+          isDestruct == true || isDestruct == 1 || isDestruct == 'true',
+      status: InteractionStatus.values.firstWhere((e) {
+        final target = e.name.toLowerCase();
+        return e.name == rawStatus ||
+            target == normStatus ||
+            (normStatus != null && normStatus.endsWith(target));
+      }, orElse: () => InteractionStatus.pending),
+      userFeedback:
+          (json['userFeedback'] ?? json['user_feedback'] ?? json['feedback'])
+              as String?,
       requestedAt: (json['requestedAt'] ?? json['requested_at']) != null
           ? DateTime.tryParse(
-                  (json['requestedAt'] ?? json['requested_at']) as String) ??
-              DateTime.now()
+                  (json['requestedAt'] ?? json['requested_at']) as String,
+                ) ??
+                DateTime.now()
           : DateTime.now(),
     );
   }

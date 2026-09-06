@@ -26,7 +26,8 @@ class ChatInputBar extends StatefulWidget {
 class _ChatInputBarState extends State<ChatInputBar> {
   TextEditingController? _internalController;
   TextEditingController get _textController =>
-      widget.controller ?? (_internalController ??= TextEditingController(text: widget.initialText));
+      widget.controller ??
+      (_internalController ??= TextEditingController(text: widget.initialText));
   final FocusNode _focusNode = FocusNode();
   bool _isSending = false;
 
@@ -48,7 +49,8 @@ class _ChatInputBarState extends State<ChatInputBar> {
   @override
   void didUpdateWidget(ChatInputBar oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.initialText != null && widget.initialText != oldWidget.initialText) {
+    if (widget.initialText != null &&
+        widget.initialText != oldWidget.initialText) {
       _textController.text = widget.initialText!;
       _textController.selection = TextSelection.fromPosition(
         TextPosition(offset: _textController.text.length),
@@ -149,12 +151,17 @@ class _ChatInputBarState extends State<ChatInputBar> {
                     prompt,
                     style: TextStyle(
                       fontSize: 12,
-                      color: isEnabled ? CyberColors.textSecondary : CyberColors.textMuted,
+                      color: isEnabled
+                          ? CyberColors.textSecondary
+                          : CyberColors.textMuted,
                     ),
                   ),
                   backgroundColor: CyberColors.surfaceElevated,
                   side: const BorderSide(color: CyberColors.subtleBorder),
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   onPressed: isEnabled ? () => _onChipTapped(prompt) : null,
                   tooltip: isEnabled ? '點擊填入/發送提示詞' : '串流進行中，禁止覆寫草稿',
                 );
@@ -189,11 +196,21 @@ class _ChatInputBarState extends State<ChatInputBar> {
                       focusNode: _focusNode,
                       minLines: 1,
                       maxLines: 4,
-                      style: const TextStyle(color: CyberColors.textPrimary, fontSize: 14),
+                      style: const TextStyle(
+                        color: CyberColors.textPrimary,
+                        fontSize: 14,
+                      ),
                       decoration: const InputDecoration(
-                        hintText: '發送 Prompt 給桌面端 Agent (Enter 送出, Shift+Enter 換行)...',
-                        hintStyle: TextStyle(color: CyberColors.textMuted, fontSize: 13),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        hintText:
+                            '發送 Prompt 給桌面端 Agent (Enter 送出, Shift+Enter 換行)...',
+                        hintStyle: TextStyle(
+                          color: CyberColors.textMuted,
+                          fontSize: 13,
+                        ),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
                         border: InputBorder.none,
                         enabledBorder: InputBorder.none,
                         focusedBorder: InputBorder.none,
@@ -210,7 +227,9 @@ class _ChatInputBarState extends State<ChatInputBar> {
                 decoration: BoxDecoration(
                   color: widget.isStreaming
                       ? CyberColors.red.withOpacity(0.9)
-                      : (_isSending ? CyberColors.cardElevated : CyberColors.cyan),
+                      : (_isSending
+                            ? CyberColors.cardElevated
+                            : CyberColors.cyan),
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: widget.isStreaming
                       ? [
@@ -221,37 +240,47 @@ class _ChatInputBarState extends State<ChatInputBar> {
                           ),
                         ]
                       : (_isSending
-                          ? null
-                          : [
-                              BoxShadow(
-                                color: CyberColors.cyan.withOpacity(0.4),
-                                blurRadius: 10,
-                                spreadRadius: -1,
-                              ),
-                            ]),
+                            ? null
+                            : [
+                                BoxShadow(
+                                  color: CyberColors.cyan.withOpacity(0.4),
+                                  blurRadius: 10,
+                                  spreadRadius: -1,
+                                ),
+                              ]),
                 ),
                 child: widget.isStreaming
                     ? IconButton(
-                        icon: const Icon(Icons.stop_rounded, color: Colors.white, size: 22),
+                        icon: const Icon(
+                          Icons.stop_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
                         onPressed: widget.onStop,
                         tooltip: '中止遠端任務 (Stop Task)',
                       )
                     : (_isSending
-                        ? const Center(
-                            child: SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(CyberColors.cyan),
+                          ? const Center(
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    CyberColors.cyan,
+                                  ),
+                                ),
                               ),
-                            ),
-                          )
-                        : IconButton(
-                            icon: const Icon(Icons.send, color: Colors.black, size: 20),
-                            onPressed: _submit,
-                            tooltip: '發送指令',
-                          )),
+                            )
+                          : IconButton(
+                              icon: const Icon(
+                                Icons.send,
+                                color: Colors.black,
+                                size: 20,
+                              ),
+                              onPressed: _submit,
+                              tooltip: '發送指令',
+                            )),
               ),
             ],
           ),

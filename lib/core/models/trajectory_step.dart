@@ -1,20 +1,8 @@
 import 'user_interaction.dart';
 
-enum StepStatus {
-  running,
-  waitingUserInteraction,
-  completed,
-  failed,
-  rejected,
-}
+enum StepStatus { running, waitingUserInteraction, completed, failed, rejected }
 
-enum StepType {
-  toolCall,
-  thinking,
-  terminalOutput,
-  fileChange,
-  statusNotice,
-}
+enum StepType { toolCall, thinking, terminalOutput, fileChange, statusNotice }
 
 class TrajectoryStep {
   final String stepId;
@@ -95,7 +83,8 @@ class TrajectoryStep {
     final rawStatus = (json['status'] ?? json['step_status'])?.toString();
     final normType = rawType?.toLowerCase().replaceAll('_', '');
     final normStatus = rawStatus?.toLowerCase().replaceAll('_', '');
-    final durationMs = json['executionDurationMs'] ?? json['execution_duration_ms'];
+    final durationMs =
+        json['executionDurationMs'] ?? json['execution_duration_ms'];
 
     final rawArgs = json['arguments'] ?? json['args'];
     final Map<String, dynamic> parsedArgs;
@@ -107,30 +96,24 @@ class TrajectoryStep {
 
     return TrajectoryStep(
       stepId: (json['stepId'] ?? json['step_id']) as String? ?? '',
-      type: StepType.values.firstWhere(
-        (e) {
-          final target = e.name.toLowerCase();
-          return e.name == rawType ||
-              target == normType ||
-              (normType != null && normType.endsWith(target));
-        },
-        orElse: () => StepType.toolCall,
-      ),
+      type: StepType.values.firstWhere((e) {
+        final target = e.name.toLowerCase();
+        return e.name == rawType ||
+            target == normType ||
+            (normType != null && normType.endsWith(target));
+      }, orElse: () => StepType.toolCall),
       toolName: (json['toolName'] ?? json['tool_name']) as String? ?? '',
       summary: json['summary'] as String? ?? '執行工具',
       description: json['description'] as String? ?? '',
       arguments: parsedArgs,
       output: json['output'] as String?,
       codeDiff: (json['codeDiff'] ?? json['code_diff']) as String?,
-      status: StepStatus.values.firstWhere(
-        (e) {
-          final target = e.name.toLowerCase();
-          return e.name == rawStatus ||
-              target == normStatus ||
-              (normStatus != null && normStatus.endsWith(target));
-        },
-        orElse: () => StepStatus.completed,
-      ),
+      status: StepStatus.values.firstWhere((e) {
+        final target = e.name.toLowerCase();
+        return e.name == rawStatus ||
+            target == normStatus ||
+            (normStatus != null && normStatus.endsWith(target));
+      }, orElse: () => StepStatus.completed),
       interaction: (json['interaction'] ?? json['user_interaction']) != null
           ? UserInteractionRequest.fromJson(
               Map<String, dynamic>.from(
@@ -140,8 +123,9 @@ class TrajectoryStep {
           : null,
       timestamp: (json['timestamp'] ?? json['created_at']) != null
           ? DateTime.tryParse(
-                  (json['timestamp'] ?? json['created_at']) as String) ??
-              DateTime.now()
+                  (json['timestamp'] ?? json['created_at']) as String,
+                ) ??
+                DateTime.now()
           : DateTime.now(),
       executionDuration: durationMs != null
           ? Duration(milliseconds: (durationMs as num).toInt())

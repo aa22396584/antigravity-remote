@@ -14,13 +14,13 @@ class FrameDecoder {
     }
 
     final flag = bytes[0];
-    final length = (bytes[1] << 24) |
-        (bytes[2] << 16) |
-        (bytes[3] << 8) |
-        bytes[4];
+    final length =
+        (bytes[1] << 24) | (bytes[2] << 16) | (bytes[3] << 8) | bytes[4];
 
     if (length < 0 || length > maxFrameLength) {
-      throw ProtocolException('Invalid frame length: $length (max: $maxFrameLength)');
+      throw ProtocolException(
+        'Invalid frame length: $length (max: $maxFrameLength)',
+      );
     }
 
     if (bytes.length < 5 + length) {

@@ -19,7 +19,10 @@ class TerminalMonitorView extends ConsumerWidget {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('即時終端輸出 (Live Terminal)', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+            const Text(
+              '即時終端輸出 (Live Terminal)',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+            ),
             Row(
               children: [
                 TransportBadge(

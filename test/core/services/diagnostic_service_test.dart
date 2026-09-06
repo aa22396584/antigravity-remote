@@ -8,10 +8,14 @@ void main() {
     });
 
     test('redacts Bearer tokens and ya29 OAuth credentials (Issue #32)', () {
-      const raw = 'Sending request with Bearer ya29.a0AfH6SMA987654321-sensitive-token to endpoint';
+      const raw =
+          'Sending request with Bearer ya29.a0AfH6SMA987654321-sensitive-token to endpoint';
       final redacted = DiagnosticService.redact(raw);
 
-      expect(redacted, isNot(contains('ya29.a0AfH6SMA987654321-sensitive-token')));
+      expect(
+        redacted,
+        isNot(contains('ya29.a0AfH6SMA987654321-sensitive-token')),
+      );
       expect(redacted, contains('[REDACTED_TOKEN]'));
     });
 
@@ -35,7 +39,9 @@ void main() {
     });
 
     test('exportReport generates sanitized formatted report', () {
-      DiagnosticService.instance.log('User connected with Bearer super_secret_token');
+      DiagnosticService.instance.log(
+        'User connected with Bearer super_secret_token',
+      );
       final report = DiagnosticService.instance.exportReport(
         appVersion: '1.0.0+1',
         isDemoMode: false,

@@ -12,9 +12,12 @@
 [![Riverpod](https://img.shields.io/badge/Riverpod-3.0-blueviolet?style=for-the-badge)](https://riverpod.dev)
 [![WebRTC](https://img.shields.io/badge/WebRTC-P2P_Mesh-FF6B6B?style=for-the-badge&logo=webrtc&logoColor=white)](https://webrtc.org)
 [![Security](https://img.shields.io/badge/ECDSA-NIST_P--256-00E676?style=for-the-badge)](https://csrc.nist.gov)
+[![Release](https://img.shields.io/badge/Release-v1.1.0-brightgreen?style=for-the-badge&logo=github)](https://github.com/ImL1s/antigravity-remote/releases/tag/v1.1.0)
+[![Tests](https://img.shields.io/badge/Tests-158%20Passed-00E5FF?style=for-the-badge&logo=flutter)](https://github.com/ImL1s/antigravity-remote/actions)
+[![Audit](https://img.shields.io/badge/Audit-34%20Issues-A855F7?style=for-the-badge)](https://github.com/ImL1s/antigravity-remote/issues/34)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
 
-[繁體中文](#-繁體中文說明) • [English](#-english-documentation) • [架構 (Architecture)](#-核心架構亮點) • [截圖 (Screenshots)](#-介面截圖預覽) • [快速開始 (Quick Start)](#-快速開始-getting-started)
+[繁體中文](#-繁體中文說明) • [English](#-english-documentation) • [📦 下載 Release](#-下載與安裝-download--releases) • [🛡️ 5 大 P0 防禦](#-5-大-p0-核心安全與控制可靠性防禦) • [📋 34 項稽核成果](#-2026-09-全面功能稽核成果) • [架構亮點](#-核心架構亮點) • [介面預覽](#-介面截圖預覽) • [快速開始](#-快速開始-getting-started)
 
 ---
 
@@ -26,6 +29,82 @@
 > ⚠️ **第三方專案聲明 / Disclaimer**：本專案為社群第三方開源客戶端，非 Google 官方產品。所有連線與遠端控制依賴使用者自行授權之憑證。已完成 2026-09 全面功能與協議安全稽核。各平台支援度請參閱 [平台能力矩陣](docs/platform_matrix.md) 與 [協議相容性規格](docs/protocol/compatibility.md)。
 
 **Antigravity Remote** 是一款專為 **Antigravity (Google Jetski)** 打造的現代化跨平台原生控制客戶端（支援 iOS、Android 與 macOS）。透過深度逆向工程解析 Antigravity 本機二進位執行檔（`language_server`）、Protobuf 通訊協議（`devtools_jetski_boq_api_proto.ApiService` 與 `LanguageServerService`）、ConnectRPC 及 WebRTC P2P DataChannel，實現隨時隨地遠端調度、監控思考過程與審批本機終端指令。
+
+---
+
+<a name="-下載與安裝-download--releases"></a>
+### 📦 下載與安裝 (Download & Releases)
+
+最新穩定正式版本：**v1.1.0** (Build `1.1.0+2`，發布日期：2026-09-06)
+
+| 產物類型 | 下載 / 訪問連結 | 規格說明 |
+| :--- | :--- | :--- |
+| 🤖 **Android 生產級 APK** | [**antigravity-remote-v1.1.0.apk (112.8MB)**](https://github.com/ImL1s/antigravity-remote/releases/download/v1.1.0/app-release.apk) | 支援 Android 7.0+ (API 24+)，含相機掃碼與純 Dart ECDSA P-256 |
+| 🚀 **GitHub Release 官方頁面** | [**GitHub Releases / v1.1.0**](https://github.com/ImL1s/antigravity-remote/releases/tag/v1.1.0) | 官方正式發布頁面、二進位產物與驗證簽名 |
+| 📝 **結構化更新日誌** | [**CHANGELOG.md**](CHANGELOG.md) | 完整記錄本次 34 項 Issues 稽核成果與重大修復細節 |
+| 🗺️ **平台相容與能力矩陣** | [**docs/platform_matrix.md**](docs/platform_matrix.md) | 各作業系統功能支援級別（Android / iOS / macOS / Desktop） |
+| 📜 **協議相容性規格書** | [**docs/protocol/compatibility.md**](docs/protocol/compatibility.md) | 雙軌傳輸、5-byte 分幀規範與 RPC 端點定義 |
+
+---
+
+<a name="-5-大-p0-核心安全與控制可靠性防禦"></a>
+### 🛡️ 5 大 P0 核心安全與控制可靠性防禦 (P0 Security & Control Reliability)
+
+針對遠端指令調度與 AI Agent 接管的核心安全隱患，本專案在 v1.1.0 完成了 5 大 P0 致命缺陷的徹底修復與防禦機制構建：
+
+| P0 項次 | 核心威脅與架構缺陷 | 解決方案與防禦機制 | 驗證測試套件 |
+| :--- | :--- | :--- | :--- |
+| **P0 #1** | **切換／刪除裝置目標不一致**<br/>切換或刪除主機後，舊連線殘留輪詢，導致指令誤發給非目標主機 | **原子清理與目標一致性工廠**<br/>切換或刪除設備時強制中斷舊 Transport、撤銷輪詢 Epoch、重置 Cascade 工作區狀態與待審批佇列 | `device_target_consistency_test.dart` |
+| **P0 #2** | **WebRTC DataChannel 盲配回覆與跨串流混流**<br/>過去採 FIFO 盲配回覆，網路抖動即錯位；串流未隔離 | **RequestID 關聯映射與實體頻道隔離**<br/>為所有 Unary RPC 分配遞增唯一的 RequestID；將控制認證 (`0x00`)、Cascade 思考串流 (`0x01`) 與終端輸出 (`0x02`) 實體隔離 | `p0_protocol_security_test.dart` |
+| **P0 #3** | **非冪等在途寫入操作盲目重送**<br/>P2P 中斷切換至 Relay 時，若重送在途破壞性指令（如 `rm -rf`）會引發嚴重災難 | **非冪等在途寫入操作防護閘門**<br/>嚴格區分 `PreFlightException`（連線前失敗，允許回退重試）與 `InFlightRpcException`（在途無 ACK，禁止盲目重試） | `p0_protocol_security_test.dart` |
+| **P0 #4** | **審批操作假樂觀完成與失敗狀態丟失**<br/>點擊審批後本地直接標記成功，若遠端失敗使用者無法感知且無法再次操作 | **遠端 200 OK 確認握手與狀態保留**<br/>審批請求改為非同步防抖並等待遠端確認；失敗時完整保留待審批狀態與步驟，允許重試並加入防連點互斥保護 | `cascade_p0_approval_test.dart` |
+| **P0 #10** | **WebRTC P2P 握手 Fail-Open 安全漏洞**<br/>連通後未經 NIST P-256 Nonce 認證即宣告連線成功並流通業務封包 | **Fail-Closed 握手狀態機安全閘門**<br/>嚴格遵循 `unauthenticated` ➔ `challengePending` ➔ `authenticated` 狀態機，未獲合法 ACK 前全面阻絕業務封包與敏感指令 | `p0_protocol_security_test.dart` |
+
+---
+
+<a name="-2026-09-全面功能稽核成果"></a>
+### 📋 2026-09 全面功能稽核成果 (34 項 Issues 規範)
+
+本專案在 2026-09 完成了由社群與架構團隊發起的全面工程稽核（追蹤於 [Issue #34](https://github.com/ImL1s/antigravity-remote/issues/34)），涵蓋 33 項專業子任務與總體驗收體系：
+
+- 🛡️ **核心控制與協議安全 (P0: 5 項)**：
+  - [x] `#1` 切換／刪除裝置後控制目標一致性與原子清理
+  - [x] `#2` WebRTC DataChannel RequestID 配對機制與多工串流隔離
+  - [x] `#3` 禁止不確定結果的非冪等寫入 RPC 在 P2P→Relay 間自動重送
+  - [x] `#4` 審批動作非同步等待遠端確認、失敗狀態完整保留與防連點保護
+  - [x] `#10` WebRTC 握手 Fail-Closed 狀態機，驗證成功前阻絕所有業務封包
+- 🌐 **連線、協議相容性與安全傳輸 (P1: 12 項)**：
+  - [x] `#5` 對話上下文生命週期隔離、先訂閱後發送保證
+  - [x] `#6` 移除假連線與固定 28ms 假延遲，Demo 與 Live 模式嚴格物理隔離
+  - [x] `#7` 真實 Instance UUID 校驗與配對有效性確認
+  - [x] `#8` 非同步串流失敗捕獲與可取消訂閱恢復
+  - [x] `#9` WebRTC 協商逾時超時、ICE 候選交換與連線生命週期管理
+  - [x] `#11` 5-byte 前綴有界分幀解碼器 (`FrameDecoder`)，防止畸形封包滲透
+  - [x] `#12` ConnectRPC 與 Protobuf 協議契約標準化與錯誤代碼精準映射
+  - [x] `#13` 連線資源所有權、Timer/Client 洩漏全面清理與前背景恢復
+  - [x] `#14` 平台安全儲存抽象與 Token 登出強制抹除 (Token Purge)
+  - [x] `#15` 帳號授權狀態原子生效與認證過期處置
+  - [x] `#16` QR Code 單引號崩潰修復、防釣魚網域與遞迴上限防禦
+  - [x] `#17` 外部 Deep Link 喚醒預覽確認與防未授權切機機制
+  - [x] `#18` 相機掃描生命週期管理、權限動態恢復與桌面手動輸入替代入口
+- 🎨 **人機工程、終端體驗與質量工程 (P1/P2: 16 項)**：
+  - [x] `#19` 發送失敗保留草稿快照 (Draft Snapshot)、快捷提示文字追加而非覆寫
+  - [x] `#20` 智慧串流自動跟隨 (Smart Auto-Scroll) 與浮動「回到即時 ⇣」按鈕
+  - [x] `#21` 統一鍵盤避讓 (Keyboard Insets) 責任，修復窄螢幕佈局溢出
+  - [x] `#22` 跨 Breakpoint / 頁籤切換保留草稿、終端緩衝與捲動位置 (`IndexedStack`)
+  - [x] `#23` 終端 UTF-8 多位元組分塊解碼器 (`Utf8ChunkDecoder`)，修復中文字與 Emoji 亂碼
+  - [x] `#24` 終端日誌 1000 訊框有界環形緩衝區與截斷提示，長時壓測防洩漏
+  - [x] `#25` 斷線 1s~30s 帶抖動指數退避重連與 `CancelCascadeTask` 遠程任務中止
+  - [x] `#26` 滿足無障礙最小 `44x44` 點擊熱區與 Tooltip 語意標籤
+  - [x] `#27` `CodeDiffViewer` 支援 unified diff 高亮、增刪著色與一鍵複製
+  - [x] `#28` 建立 Android 生產級安全簽名配置與跨平台能力矩陣
+  - [x] `#29` 建立分層 CI 自動化檢查 (`dart format`、`flutter analyze`、單元測試)
+  - [x] `#30` NIST P-256 嚴格 ASN.1 DER 解碼與 P1363 向量測試
+  - [x] `#31` 校正文檔標示、平台能力矩陣與相容性規範
+  - [x] `#32` 儲存降級警示橫幅 (Storage Fallback Banner) 與診斷日誌敏感 Token 脫敏
+  - [x] `#33` 待審批/任務提醒事件去重通知機制
+- 🎯 **稽核追蹤總表**：
+  - [x] `#34` 33 項子單相依順序、架構重構與發布驗收總體把關
 
 ---
 
@@ -136,8 +215,11 @@ flowchart TD
   - 透過 Google STUN 伺服器 (`stun:stun.l.google.com:19302`) 與 TURN 伺服器進行 ICE 候選交換，透過 `SendSignalingMessage` 與 `PollSignalingMessages` 完成 SDP Offer/Answer 信令協商。
   - WebRTC DataChannel 連通後，桌面端發送 **32-byte 隨機數 Nonce 挑戰 (Channel Binding Challenge)**。
   - 客戶端以純 Dart ECDSA P-256 私鑰完成挑戰簽章並回傳，桌面端驗簽成功後即刻升級為最高優先級直連通道，端到端延遲降至 **< 20ms**！
-- **智慧自適應降級與切換 (Smart Multiplexer)**：
+- **智慧自適應降級與切換 (Smart Multiplexer & Exponential Backoff)**：
   - 當 WebRTC 直連中斷或弱網抖動時，`DualTransportManager` 在毫秒級內無縫平滑回退至 Cloud Relay 軌道，確保操控指令不遺失、不中斷。
+  - 實作 **1s 至 30s 隨機抖動指數退避自動重連演算法 (Exponential Backoff with 20% Jitter)**，防止弱網環境下造成網路連線驚群風暴。
+  - **在途非冪等寫入操作防護 (In-Flight Safety Gating)**：嚴格阻絕在途未獲確認的寫入操作在 Relay 間盲目重試，杜絕重複執行破壞性終端指令。
+  - **真實網路延遲量測 (Real Latency Probing)**：完全摒棄模擬假延遲，透過雙向 RTT 探針動態呈現真實網路質量。
 
 #### 3. 5 位元組資料分幀標準 (DataChannel Framing Specification)
 
@@ -258,6 +340,30 @@ Reverse-engineered from the Antigravity local binary daemon (`language_server`),
 
 ---
 
+### 📦 Download & Official Releases
+
+Latest Stable Release: **v1.1.0** (Build `1.1.0+2`, Released: 2026-09-06)
+
+| Artifact | Download Link | Description |
+| :--- | :--- | :--- |
+| 🤖 **Android Production APK** | [**antigravity-remote-v1.1.0.apk (112.8MB)**](https://github.com/ImL1s/antigravity-remote/releases/download/v1.1.0/app-release.apk) | Compatible with Android 7.0+ (API 24+), mobile scanner & pure Dart P-256 |
+| 🚀 **GitHub Release Page** | [**GitHub Releases / v1.1.0**](https://github.com/ImL1s/antigravity-remote/releases/tag/v1.1.0) | Official release portal, binary distribution & sha256 checksums |
+| 📝 **Changelog & Notes** | [**CHANGELOG.md**](CHANGELOG.md) | Granular changelog documenting all 34 audited issues and fixes |
+| 🗺️ **Platform Matrix** | [**docs/platform_matrix.md**](docs/platform_matrix.md) | Platform verification tiers across Android, iOS, macOS, Desktop |
+| 📜 **Protocol Compatibility** | [**docs/protocol/compatibility.md**](docs/protocol/compatibility.md) | Dual-Transport framing, RPC endpoints, and fail-closed state machine |
+
+---
+
+### 🛡️ 5 Core P0 Safety & Reliability Defenses
+
+1. **Atomic Device Target Consistency (Issue #1)**: Complete teardown of previous transports, cancelling polling loops, and resetting pending approvals when switching or removing devices, preventing command misdirection.
+2. **WebRTC RequestID Correlation & Multi-Channel Isolation (Issue #2)**: Replaced naive FIFO pairing with monotonically increasing `requestId` mapping; physically isolated control (`0x00`), thought streaming (`0x01`), and terminal bytes (`0x02`).
+3. **In-Flight Write Protection (Issue #3)**: Prevents in-flight destructive write operations from automatic retry during P2P-to-Relay failovers, stopping duplicate execution of terminal commands.
+4. **Remote-Acknowledged Approval & State Retention (Issue #4)**: Approval dialog waits for 200 OK server confirmation; retains pending approval state and steps upon failure, with debounce lock against rapid tapping.
+5. **Fail-Closed WebRTC Handshake Gate (Issue #10)**: Strict enforcement of the `unauthenticated` ➔ `challengePending` ➔ `authenticated` state machine; completely blocks business packets until ECDSA NIST P-256 challenge verification succeeds.
+
+---
+
 ### 🚀 Key Architectural Pillars
 
 #### 1. System Architecture Topology
@@ -365,8 +471,11 @@ flowchart TD
   - Signaling messages (SDP Offer/Answer & ICE Candidates) are exchanged via `SendSignalingMessage` and `PollSignalingMessages`.
   - Once the DataChannel connects, the host Mac sends a **Channel Binding Nonce Challenge** (32-byte cryptographic random nonce).
   - The client signs the nonce using pure Dart ECDSA P-256 cryptography and returns the signature; upon verification, the session is promoted to a high-speed direct peer pipe with **latency < 20ms**!
-- **Adaptive Multiplexing**:
+- **Adaptive Multiplexing & Exponential Backoff**:
   - `DualTransportManager` continuously monitors round-trip latency and connection health, seamlessly falling back to Cloud Relay if P2P degrades, ensuring zero dropped commands.
+  - Implements **1s to 30s Exponential Backoff with 20% Jitter** for auto-reconnection without hammering the network.
+  - **In-Flight Safety Gating**: Prevents unacknowledged write RPCs from duplicate retransmission.
+  - **Real Latency Probing**: Measures true round-trip ping via bidirectional probes without artificial latency injection.
 
 #### 3. 5-Byte Data Framing Format
 
@@ -546,19 +655,32 @@ flutter run
 
 ---
 
-## 🧪 測試驗證記錄 (Verification Record)
+## 🧪 測試驗證記錄與工程指標 (Verification Record & Quality Metrics)
 
-本專案經過嚴格的單元測試與 Widget 整合測試覆蓋：
+本專案建立嚴謹的分層自動化測試體系，全數通過 **158 項單元與 Widget 整合測試**：
 
 ```bash
+# 執行全套自動化測試
 flutter test
+
+# 驗證代碼靜態分析 (0 警告、0 錯誤)
+flutter analyze
+
+# 驗證代碼格式規範
+dart format --output=none --set-exit-if-changed .
 ```
 
-- ✅ **ECDSA NIST P-256 密鑰與簽名測試**：驗證公私鑰生成、SPKI DER 編碼導出及 Channel Binding Nonce 簽章驗證。
-- ✅ **QR Parser 測試**：驗證 Google AccountChooser、`antigravity://` 深度連結、JSON 負載與直接 UUID 解析。
-- ✅ **RemoteControlService 測試**：驗證 Live 模式與 Demo 模式切換、即時思考串流、軌跡步驟解析及審批指令派送。
-- ✅ **Riverpod Notifier 測試**：覆蓋 `CascadeNotifier`、`TerminalNotifier`、`DeviceNotifier` 的狀態變遷與生命週期。
-- ✅ **Widget 測試**：驗證 `TransportBadge` 徽章渲染、`ThinkingCard` 展開折疊、`TrajectoryStepCard` 行內審批按鈕及標籤導航切換。
+| 測試維度 / 模組 | 覆蓋測試數 | 驗證範疇與核心測試集 |
+| :--- | :--- | :--- |
+| 🛡️ **P0 協議安全與可靠性** | 12 項 | `p0_protocol_security_test.dart`、`device_target_consistency_test.dart`、`cascade_p0_approval_test.dart`（驗證原子清理、RequestID 映射、非冪等防重送、審批 200 OK 確認、Fail-Closed 閘門） |
+| 💬 **P1/P2 聊天與人機工程** | 36 項 | `p1_p2_experience_test.dart`、`cascade_notifier_test.dart`（驗證草稿快照復原、DeliveryStatus、Enter/Shift+Enter、智慧捲動與回到即時按鈕） |
+| 💻 **終端機解碼與長時緩衝** | 18 項 | `utf8_chunk_decoder_test.dart`、`ansi_parser_test.dart`、`terminal_notifier_test.dart`（驗證 CJK/Emoji 跨包解碼、1000 訊框有界環形緩衝、`sendRaw`） |
+| 📱 **響應式佈局與無障礙** | 16 項 | `app_widget_test.dart`、`p1_p2_experience_test.dart`（驗證 800dp NavigationRail、IndexedStack 狀態保留、鍵盤避讓、>=44x44 觸控熱區） |
+| 🔐 **密碼學與 SPKI 向量** | 12 項 | `ecdsa_p256_test.dart`（驗證 NIST P-256 secp256r1 密鑰對生成、嚴格 ASN.1 DER 解碼、P1363 向量測試、Channel Binding Nonce 簽章） |
+| 📸 **QR 與 Deep Link 整合** | 18 項 | `qr_parser_test.dart`、`deep_link_service_test.dart`、`deep_link_integration_test.dart`（驗證 AccountChooser 網址、防釣魚過濾、冷熱啟動自動切機） |
+| 🔄 **Riverpod 狀態與生命週期** | 26 項 | `device_notifier_test.dart`、`remote_control_service_test.dart`、`storage_service_test.dart`（驗證 Demo/Live 物理隔離、儲存降級橫幅、憑證脫敏） |
+| 🎨 **Widget 整合與視覺互動** | 20 項 | `user_approval_dialog_test.dart`、`connection_settings_test.dart`（驗證 CodeDiffViewer 增刪著色與複製、破壞性審批標籤、自訂主題） |
+| 🎯 **總計測試指標** | **158 Passed (100%)** | **0 Failed • 0 Skipped • flutter analyze 0 警告 • CI 雙平臺全綠** |
 
 ---
 

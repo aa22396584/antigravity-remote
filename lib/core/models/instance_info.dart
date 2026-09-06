@@ -7,11 +7,7 @@ enum InstanceConnectionStatus {
   idle,
 }
 
-enum TransportType {
-  p2p,
-  relay,
-  offline,
-}
+enum TransportType { p2p, relay, offline }
 
 class InstanceInfo {
   final String instanceId;

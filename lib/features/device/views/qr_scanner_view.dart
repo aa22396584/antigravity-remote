@@ -146,16 +146,24 @@ class _QrScannerViewState extends State<QrScannerView>
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.videocam_off, size: 48, color: CyberColors.amber),
+                      const Icon(
+                        Icons.videocam_off,
+                        size: 48,
+                        color: CyberColors.amber,
+                      ),
                       const SizedBox(height: 16),
                       Text(
                         '無法啟動相機 (相機已被佔用或無權限)',
-                        style: TextStyle(color: CyberColors.textPrimary, fontSize: 16),
+                        style: TextStyle(
+                          color: CyberColors.textPrimary,
+                          fontSize: 16,
+                        ),
                       ),
                       const SizedBox(height: 12),
                       CyberButton(
                         text: '切換為手動輸入 ID',
-                        onPressed: () => setState(() => _showManualDialog = true),
+                        onPressed: () =>
+                            setState(() => _showManualDialog = true),
                       ),
                     ],
                   ),
@@ -174,7 +182,10 @@ class _QrScannerViewState extends State<QrScannerView>
                   // Corner brackets
                   Container(
                     decoration: BoxDecoration(
-                      border: Border.all(color: CyberColors.cyan.withOpacity(0.4), width: 1.5),
+                      border: Border.all(
+                        color: CyberColors.cyan.withOpacity(0.4),
+                        width: 1.5,
+                      ),
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
@@ -215,7 +226,10 @@ class _QrScannerViewState extends State<QrScannerView>
             child: Column(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.black.withOpacity(0.7),
                     borderRadius: BorderRadius.circular(20),
@@ -223,7 +237,10 @@ class _QrScannerViewState extends State<QrScannerView>
                   ),
                   child: const Text(
                     '對準 Antigravity 設定頁面之 Remote Control QR Code',
-                    style: TextStyle(color: CyberColors.textSecondary, fontSize: 13),
+                    style: TextStyle(
+                      color: CyberColors.textSecondary,
+                      fontSize: 13,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -263,7 +280,10 @@ class _QrScannerViewState extends State<QrScannerView>
                             ),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.close, color: CyberColors.textMuted),
+                            icon: const Icon(
+                              Icons.close,
+                              color: CyberColors.textMuted,
+                            ),
                             onPressed: _closeManualDialog,
                           ),
                         ],
@@ -271,15 +291,22 @@ class _QrScannerViewState extends State<QrScannerView>
                       const SizedBox(height: 12),
                       const Text(
                         '可輸入完整網址、antigravity:// 連結或 instanceId：',
-                        style: TextStyle(fontSize: 13, color: CyberColors.textSecondary),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: CyberColors.textSecondary,
+                        ),
                       ),
                       const SizedBox(height: 12),
                       TextField(
                         controller: _manualInputController,
-                        style: AppTheme.codeFont(color: CyberColors.cyan, fontSize: 13),
+                        style: AppTheme.codeFont(
+                          color: CyberColors.cyan,
+                          fontSize: 13,
+                        ),
                         maxLines: 3,
                         decoration: const InputDecoration(
-                          hintText: '例如: https://antigravity.google.com/r/2114863e-6436-4398-b26f-8672c1bd5e4b-v2',
+                          hintText:
+                              '例如: https://antigravity.google.com/r/2114863e-6436-4398-b26f-8672c1bd5e4b-v2',
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -288,13 +315,13 @@ class _QrScannerViewState extends State<QrScannerView>
                         children: [
                           TextButton(
                             onPressed: _closeManualDialog,
-                            child: const Text('取消', style: TextStyle(color: CyberColors.textMuted)),
+                            child: const Text(
+                              '取消',
+                              style: TextStyle(color: CyberColors.textMuted),
+                            ),
                           ),
                           const SizedBox(width: 10),
-                          CyberButton(
-                            text: '確認綁定',
-                            onPressed: _submitManual,
-                          ),
+                          CyberButton(text: '確認綁定', onPressed: _submitManual),
                         ],
                       ),
                     ],

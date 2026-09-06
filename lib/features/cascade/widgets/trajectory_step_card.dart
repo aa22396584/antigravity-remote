@@ -9,13 +9,10 @@ import 'user_approval_dialog.dart';
 
 class TrajectoryStepCard extends StatefulWidget {
   final TrajectoryStep step;
-  final void Function(String interactionId, bool approved, String? feedback)? onApproval;
+  final void Function(String interactionId, bool approved, String? feedback)?
+  onApproval;
 
-  const TrajectoryStepCard({
-    super.key,
-    required this.step,
-    this.onApproval,
-  });
+  const TrajectoryStepCard({super.key, required this.step, this.onApproval});
 
   @override
   State<TrajectoryStepCard> createState() => _TrajectoryStepCardState();
@@ -102,7 +99,11 @@ class _TrajectoryStepCardState extends State<TrajectoryStepCard> {
                       color: statusColor.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(_getToolIcon(step.toolName), size: 18, color: statusColor),
+                    child: Icon(
+                      _getToolIcon(step.toolName),
+                      size: 18,
+                      color: statusColor,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -129,7 +130,10 @@ class _TrajectoryStepCardState extends State<TrajectoryStepCard> {
                   ),
                   // Status Pill
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: statusColor.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(12),
@@ -141,7 +145,8 @@ class _TrajectoryStepCardState extends State<TrajectoryStepCard> {
                         StatusIndicator(
                           color: statusColor,
                           size: 6,
-                          animate: step.status == StepStatus.running || isWaiting,
+                          animate:
+                              step.status == StepStatus.running || isWaiting,
                         ),
                         const SizedBox(width: 5),
                         Text(
@@ -157,7 +162,9 @@ class _TrajectoryStepCardState extends State<TrajectoryStepCard> {
                   ),
                   const SizedBox(width: 4),
                   Icon(
-                    _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    _isExpanded
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
                     size: 18,
                     color: CyberColors.textMuted,
                   ),
@@ -180,7 +187,11 @@ class _TrajectoryStepCardState extends State<TrajectoryStepCard> {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.security, color: CyberColors.amber, size: 16),
+                        const Icon(
+                          Icons.security,
+                          color: CyberColors.amber,
+                          size: 16,
+                        ),
                         const SizedBox(width: 6),
                         Text(
                           step.interaction!.title,
@@ -195,7 +206,10 @@ class _TrajectoryStepCardState extends State<TrajectoryStepCard> {
                     const SizedBox(height: 6),
                     Text(
                       step.interaction!.actionTarget,
-                      style: AppTheme.codeFont(color: CyberColors.textPrimary, fontSize: 11.5),
+                      style: AppTheme.codeFont(
+                        color: CyberColors.textPrimary,
+                        fontSize: 11.5,
+                      ),
                     ),
                     const SizedBox(height: 10),
                     Row(
@@ -204,7 +218,10 @@ class _TrajectoryStepCardState extends State<TrajectoryStepCard> {
                           child: CyberButton(
                             text: '審批詳情',
                             isOutlined: true,
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 8,
+                            ),
                             onPressed: () {
                               UserApprovalDialog.show(
                                 context,
@@ -225,7 +242,10 @@ class _TrajectoryStepCardState extends State<TrajectoryStepCard> {
                           child: CyberButton(
                             text: '直接核准',
                             color: CyberColors.emerald,
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 8,
+                            ),
                             onPressed: () {
                               widget.onApproval?.call(
                                 step.interaction!.interactionId,
@@ -251,7 +271,10 @@ class _TrajectoryStepCardState extends State<TrajectoryStepCard> {
               if (step.description.isNotEmpty) ...[
                 Text(
                   step.description,
-                  style: const TextStyle(color: CyberColors.textSecondary, fontSize: 12.5),
+                  style: const TextStyle(
+                    color: CyberColors.textSecondary,
+                    fontSize: 12.5,
+                  ),
                 ),
                 const SizedBox(height: 8),
               ],
@@ -260,7 +283,11 @@ class _TrajectoryStepCardState extends State<TrajectoryStepCard> {
               if (step.arguments.isNotEmpty) ...[
                 const Text(
                   '呼叫參數 (Arguments):',
-                  style: TextStyle(color: CyberColors.textMuted, fontSize: 11, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    color: CyberColors.textMuted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Container(
@@ -280,8 +307,18 @@ class _TrajectoryStepCardState extends State<TrajectoryStepCard> {
                             text: TextSpan(
                               style: AppTheme.codeFont(fontSize: 11.5),
                               children: [
-                                TextSpan(text: '${entry.key}: ', style: const TextStyle(color: CyberColors.cyan)),
-                                TextSpan(text: '${entry.value}', style: const TextStyle(color: CyberColors.textPrimary)),
+                                TextSpan(
+                                  text: '${entry.key}: ',
+                                  style: const TextStyle(
+                                    color: CyberColors.cyan,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: '${entry.value}',
+                                  style: const TextStyle(
+                                    color: CyberColors.textPrimary,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -296,7 +333,11 @@ class _TrajectoryStepCardState extends State<TrajectoryStepCard> {
               if (step.codeDiff != null) ...[
                 const Text(
                   '代碼變更 (Diff):',
-                  style: TextStyle(color: CyberColors.textMuted, fontSize: 11, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    color: CyberColors.textMuted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 CodeDiffViewer(diff: step.codeDiff!),
@@ -307,7 +348,11 @@ class _TrajectoryStepCardState extends State<TrajectoryStepCard> {
               if (step.output != null) ...[
                 const Text(
                   '執行結果 (Output):',
-                  style: TextStyle(color: CyberColors.textMuted, fontSize: 11, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    color: CyberColors.textMuted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Container(

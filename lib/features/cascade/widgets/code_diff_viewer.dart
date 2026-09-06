@@ -2,13 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/theme/app_theme.dart';
 
-enum _DiffLineType {
-  header,
-  hunk,
-  added,
-  deleted,
-  context,
-}
+enum _DiffLineType { header, hunk, added, deleted, context }
 
 class _ParsedDiffLine {
   final _DiffLineType type;
@@ -28,11 +22,7 @@ class CodeDiffViewer extends StatefulWidget {
   final String diff;
   final String? fileName;
 
-  const CodeDiffViewer({
-    super.key,
-    required this.diff,
-    this.fileName,
-  });
+  const CodeDiffViewer({super.key, required this.diff, this.fileName});
 
   @override
   State<CodeDiffViewer> createState() => _CodeDiffViewerState();
@@ -49,44 +39,50 @@ class _CodeDiffViewerState extends State<CodeDiffViewer> {
     int? currentOld;
     int? currentNew;
 
-    final hunkRegex = RegExp(r'^@@\s+-(\d+)(?:,(\d+))?\s+\+(\d+)(?:,(\d+))?\s+@@');
+    final hunkRegex = RegExp(
+      r'^@@\s+-(\d+)(?:,(\d+))?\s+\+(\d+)(?:,(\d+))?\s+@@',
+    );
 
     for (final line in lines) {
       final hunkMatch = hunkRegex.firstMatch(line);
       if (hunkMatch != null) {
         currentOld = int.tryParse(hunkMatch.group(1) ?? '');
         currentNew = int.tryParse(hunkMatch.group(3) ?? '');
-        parsed.add(_ParsedDiffLine(
-          type: _DiffLineType.hunk,
-          text: line,
-        ));
-      } else if (line.startsWith('+++') || line.startsWith('---') || line.startsWith('diff --git')) {
-        parsed.add(_ParsedDiffLine(
-          type: _DiffLineType.header,
-          text: line,
-        ));
+        parsed.add(_ParsedDiffLine(type: _DiffLineType.hunk, text: line));
+      } else if (line.startsWith('+++') ||
+          line.startsWith('---') ||
+          line.startsWith('diff --git')) {
+        parsed.add(_ParsedDiffLine(type: _DiffLineType.header, text: line));
       } else if (line.startsWith('+')) {
-        parsed.add(_ParsedDiffLine(
-          type: _DiffLineType.added,
-          newLine: currentNew,
-          text: line.length > 1 ? line.substring(1) : '',
-        ));
+        parsed.add(
+          _ParsedDiffLine(
+            type: _DiffLineType.added,
+            newLine: currentNew,
+            text: line.length > 1 ? line.substring(1) : '',
+          ),
+        );
         if (currentNew != null) currentNew++;
       } else if (line.startsWith('-')) {
-        parsed.add(_ParsedDiffLine(
-          type: _DiffLineType.deleted,
-          oldLine: currentOld,
-          text: line.length > 1 ? line.substring(1) : '',
-        ));
+        parsed.add(
+          _ParsedDiffLine(
+            type: _DiffLineType.deleted,
+            oldLine: currentOld,
+            text: line.length > 1 ? line.substring(1) : '',
+          ),
+        );
         if (currentOld != null) currentOld++;
       } else {
-        final content = line.startsWith(' ') && line.length > 1 ? line.substring(1) : line;
-        parsed.add(_ParsedDiffLine(
-          type: _DiffLineType.context,
-          oldLine: currentOld,
-          newLine: currentNew,
-          text: content,
-        ));
+        final content = line.startsWith(' ') && line.length > 1
+            ? line.substring(1)
+            : line;
+        parsed.add(
+          _ParsedDiffLine(
+            type: _DiffLineType.context,
+            oldLine: currentOld,
+            newLine: currentNew,
+            text: content,
+          ),
+        );
         if (currentOld != null) currentOld++;
         if (currentNew != null) currentNew++;
       }
@@ -109,7 +105,9 @@ class _CodeDiffViewerState extends State<CodeDiffViewer> {
         .where((l) => l.type == _DiffLineType.added)
         .map((l) => l.text)
         .join('\n');
-    Clipboard.setData(ClipboardData(text: addedLines.isNotEmpty ? addedLines : widget.diff));
+    Clipboard.setData(
+      ClipboardData(text: addedLines.isNotEmpty ? addedLines : widget.diff),
+    );
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('已複製變更代碼至剪貼簿'),
@@ -141,7 +139,9 @@ class _CodeDiffViewerState extends State<CodeDiffViewer> {
   Widget build(BuildContext context) {
     final parsed = _parseDiff(widget.diff);
     final isLong = parsed.length > _maxInitialLines;
-    final visibleLines = (isLong && !_expanded) ? parsed.sublist(0, _maxInitialLines) : parsed;
+    final visibleLines = (isLong && !_expanded)
+        ? parsed.sublist(0, _maxInitialLines)
+        : parsed;
     final displayFileName = _detectFileName(widget.diff) ?? 'Unified Code Diff';
 
     int additions = parsed.where((l) => l.type == _DiffLineType.added).length;
@@ -163,7 +163,9 @@ class _CodeDiffViewerState extends State<CodeDiffViewer> {
             decoration: const BoxDecoration(
               color: CyberColors.surface,
               borderRadius: BorderRadius.vertical(top: Radius.circular(9)),
-              border: Border(bottom: BorderSide(color: CyberColors.subtleBorder)),
+              border: Border(
+                bottom: BorderSide(color: CyberColors.subtleBorder),
+              ),
             ),
             child: Row(
               children: [
@@ -181,7 +183,10 @@ class _CodeDiffViewerState extends State<CodeDiffViewer> {
                 ),
                 // Stats badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: CyberColors.surfaceElevated,
                     borderRadius: BorderRadius.circular(4),
@@ -189,24 +194,52 @@ class _CodeDiffViewerState extends State<CodeDiffViewer> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('+$additions', style: const TextStyle(color: CyberColors.emerald, fontSize: 11, fontWeight: FontWeight.bold)),
+                      Text(
+                        '+$additions',
+                        style: const TextStyle(
+                          color: CyberColors.emerald,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       const SizedBox(width: 4),
-                      Text('-$deletions', style: const TextStyle(color: CyberColors.red, fontSize: 11, fontWeight: FontWeight.bold)),
+                      Text(
+                        '-$deletions',
+                        style: const TextStyle(
+                          color: CyberColors.red,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 const SizedBox(width: 6),
                 IconButton(
-                  icon: const Icon(Icons.copy, size: 16, color: CyberColors.textMuted),
+                  icon: const Icon(
+                    Icons.copy,
+                    size: 16,
+                    color: CyberColors.textMuted,
+                  ),
                   onPressed: () => _copyDiff(context),
                   tooltip: '複製完整 Diff',
-                  constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                  constraints: const BoxConstraints(
+                    minWidth: 44,
+                    minHeight: 44,
+                  ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.content_copy_outlined, size: 16, color: CyberColors.cyan),
+                  icon: const Icon(
+                    Icons.content_copy_outlined,
+                    size: 16,
+                    color: CyberColors.cyan,
+                  ),
                   onPressed: () => _copyAddedCode(context, parsed),
                   tooltip: '複製變更內容',
-                  constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                  constraints: const BoxConstraints(
+                    minWidth: 44,
+                    minHeight: 44,
+                  ),
                 ),
               ],
             ),
@@ -235,12 +268,20 @@ class _CodeDiffViewerState extends State<CodeDiffViewer> {
                 alignment: Alignment.center,
                 decoration: const BoxDecoration(
                   color: CyberColors.surfaceElevated,
-                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(9)),
-                  border: Border(top: BorderSide(color: CyberColors.subtleBorder)),
+                  borderRadius: BorderRadius.vertical(
+                    bottom: Radius.circular(9),
+                  ),
+                  border: Border(
+                    top: BorderSide(color: CyberColors.subtleBorder),
+                  ),
                 ),
                 child: Text(
                   '展開剩餘 ${parsed.length - _maxInitialLines} 行代碼差異 ⇣',
-                  style: const TextStyle(color: CyberColors.cyan, fontSize: 12, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    color: CyberColors.cyan,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
@@ -309,7 +350,10 @@ class _CodeDiffViewerState extends State<CodeDiffViewer> {
             child: Text(
               oldStr,
               textAlign: TextAlign.right,
-              style: AppTheme.codeFont(color: CyberColors.textMuted.withOpacity(0.5), fontSize: 11),
+              style: AppTheme.codeFont(
+                color: CyberColors.textMuted.withOpacity(0.5),
+                fontSize: 11,
+              ),
             ),
           ),
           const SizedBox(width: 6),
@@ -319,7 +363,10 @@ class _CodeDiffViewerState extends State<CodeDiffViewer> {
             child: Text(
               newStr,
               textAlign: TextAlign.right,
-              style: AppTheme.codeFont(color: CyberColors.textMuted.withOpacity(0.5), fontSize: 11),
+              style: AppTheme.codeFont(
+                color: CyberColors.textMuted.withOpacity(0.5),
+                fontSize: 11,
+              ),
             ),
           ),
           const SizedBox(width: 6),
@@ -328,17 +375,18 @@ class _CodeDiffViewerState extends State<CodeDiffViewer> {
             width: 14,
             child: Text(
               sign,
-              style: AppTheme.codeFont(color: textColor, fontSize: 11.5, fontWeight: FontWeight.bold),
+              style: AppTheme.codeFont(
+                color: textColor,
+                fontSize: 11.5,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           const SizedBox(width: 4),
           // Code Text
           SelectableText(
             line.text,
-            style: AppTheme.codeFont(
-              color: textColor,
-              fontSize: 12,
-            ),
+            style: AppTheme.codeFont(color: textColor, fontSize: 12),
           ),
         ],
       ),

@@ -18,7 +18,9 @@ class DeepLinkService {
   Stream<ParsedRemoteTarget> get targetStream => _targetController.stream;
 
   /// 初始化 Deep Link 監聽器（支援冷啟動與熱啟動）
-  Future<void> init({void Function(ParsedRemoteTarget target)? onTargetReceived}) async {
+  Future<void> init({
+    void Function(ParsedRemoteTarget target)? onTargetReceived,
+  }) async {
     if (_initialized) return;
     _initialized = true;
 

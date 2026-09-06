@@ -15,10 +15,7 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: TransportBadge(
-              transport: TransportType.p2p,
-              latencyMs: 14,
-            ),
+            body: TransportBadge(transport: TransportType.p2p, latencyMs: 14),
           ),
         ),
       );
@@ -27,7 +24,9 @@ void main() {
       expect(find.text('14ms'), findsOneWidget);
     });
 
-    testWidgets('ThinkingCard renders thinking content and toggles collapse', (tester) async {
+    testWidgets('ThinkingCard renders thinking content and toggles collapse', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -49,57 +48,60 @@ void main() {
       expect(find.text('正在分析專案測試檔案...'), findsOneWidget);
     });
 
-    testWidgets('TrajectoryStepCard renders tool name and inline approve button when waiting', (tester) async {
-      final req = UserInteractionRequest(
-        interactionId: 'test-req',
-        type: UserInteractionType.askPermission,
-        title: '請求終端指令授權',
-        description: '執行測試',
-        actionTarget: 'flutter test',
-        requestedAt: DateTime.now(),
-      );
+    testWidgets(
+      'TrajectoryStepCard renders tool name and inline approve button when waiting',
+      (tester) async {
+        final req = UserInteractionRequest(
+          interactionId: 'test-req',
+          type: UserInteractionType.askPermission,
+          title: '請求終端指令授權',
+          description: '執行測試',
+          actionTarget: 'flutter test',
+          requestedAt: DateTime.now(),
+        );
 
-      final step = TrajectoryStep(
-        stepId: 'step-1',
-        type: StepType.toolCall,
-        toolName: 'run_command',
-        summary: '執行單元測試',
-        status: StepStatus.waitingUserInteraction,
-        interaction: req,
-        timestamp: DateTime.now(),
-      );
+        final step = TrajectoryStep(
+          stepId: 'step-1',
+          type: StepType.toolCall,
+          toolName: 'run_command',
+          summary: '執行單元測試',
+          status: StepStatus.waitingUserInteraction,
+          interaction: req,
+          timestamp: DateTime.now(),
+        );
 
-      bool approvedCalled = false;
+        bool approvedCalled = false;
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: TrajectoryStepCard(
-              step: step,
-              onApproval: (id, approved, feedback) {
-                approvedCalled = true;
-              },
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: TrajectoryStepCard(
+                step: step,
+                onApproval: (id, approved, feedback) {
+                  approvedCalled = true;
+                },
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      expect(find.text('執行單元測試'), findsOneWidget);
-      expect(find.text('等待審批'), findsOneWidget);
-      expect(find.text('直接核准'), findsOneWidget);
+        expect(find.text('執行單元測試'), findsOneWidget);
+        expect(find.text('等待審批'), findsOneWidget);
+        expect(find.text('直接核准'), findsOneWidget);
 
-      // Tap directly approve button
-      await tester.tap(find.text('直接核准'));
-      await tester.pump();
+        // Tap directly approve button
+        await tester.tap(find.text('直接核准'));
+        await tester.pump();
 
-      expect(approvedCalled, isTrue);
-    });
+        expect(approvedCalled, isTrue);
+      },
+    );
 
-    testWidgets('AntigravityRemoteApp launches and switches tabs', (tester) async {
+    testWidgets('AntigravityRemoteApp launches and switches tabs', (
+      tester,
+    ) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: AntigravityRemoteApp(),
-        ),
+        const ProviderScope(child: AntigravityRemoteApp()),
       );
       await tester.pump(const Duration(milliseconds: 300));
 

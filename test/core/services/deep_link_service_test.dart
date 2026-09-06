@@ -16,29 +16,32 @@ void main() {
       service.dispose();
     });
 
-    test('handleRawUri correctly emits target and returns ParsedRemoteTarget', () async {
-      const url =
-          'https://antigravity.google.com/r/inst-link-test-99?p=c/cascade-link-123';
+    test(
+      'handleRawUri correctly emits target and returns ParsedRemoteTarget',
+      () async {
+        const url =
+            'https://antigravity.google.com/r/inst-link-test-99?p=c/cascade-link-123';
 
-      ParsedRemoteTarget? received;
-      final sub = service.targetStream.listen((target) {
-        received = target;
-      });
+        ParsedRemoteTarget? received;
+        final sub = service.targetStream.listen((target) {
+          received = target;
+        });
 
-      final parsed = service.handleRawUri(url);
+        final parsed = service.handleRawUri(url);
 
-      expect(parsed, isNotNull);
-      expect(parsed!.instanceId, 'inst-link-test-99');
-      expect(parsed.cascadeId, 'cascade-link-123');
+        expect(parsed, isNotNull);
+        expect(parsed!.instanceId, 'inst-link-test-99');
+        expect(parsed.cascadeId, 'cascade-link-123');
 
-      // Wait a tick for stream delivery
-      await Future.delayed(Duration.zero);
-      expect(received, isNotNull);
-      expect(received!.instanceId, 'inst-link-test-99');
-      expect(received!.cascadeId, 'cascade-link-123');
+        // Wait a tick for stream delivery
+        await Future.delayed(Duration.zero);
+        expect(received, isNotNull);
+        expect(received!.instanceId, 'inst-link-test-99');
+        expect(received!.cascadeId, 'cascade-link-123');
 
-      await sub.cancel();
-    });
+        await sub.cancel();
+      },
+    );
 
     test('handleRawUri returns null on invalid URI without emitting', () async {
       bool called = false;
@@ -58,9 +61,11 @@ void main() {
     test('init calls onTargetReceived when target is handled', () async {
       ParsedRemoteTarget? targetFromCallback;
 
-      await service.init(onTargetReceived: (target) {
-        targetFromCallback = target;
-      });
+      await service.init(
+        onTargetReceived: (target) {
+          targetFromCallback = target;
+        },
+      );
 
       service.handleRawUri('antigravity://r/instant-cold-start-id');
 

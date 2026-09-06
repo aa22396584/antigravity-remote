@@ -45,7 +45,8 @@ class FrameAccumulator {
 
     while (offset + 5 <= totalLen) {
       final flag = bytes[offset];
-      final length = (bytes[offset + 1] << 24) |
+      final length =
+          (bytes[offset + 1] << 24) |
           (bytes[offset + 2] << 16) |
           (bytes[offset + 3] << 8) |
           bytes[offset + 4];
@@ -88,11 +89,7 @@ class FrameAccumulator {
 }
 
 /// Channel Binding 握手狀態機
-enum ChannelAuthState {
-  unauthenticated,
-  challengePending,
-  authenticated,
-}
+enum ChannelAuthState { unauthenticated, challengePending, authenticated }
 
 class WebRtcMeshClient implements TransportClient {
   static const int signalingPollTimeoutSeconds = 30;
@@ -136,9 +133,10 @@ class WebRtcMeshClient implements TransportClient {
     required this.targetInstanceUuid,
     String? clientInstanceId,
     http.Client? httpClient,
-  })  : clientInstanceId = clientInstanceId ??
-            'flutter-remote-${DateTime.now().millisecondsSinceEpoch}',
-        _httpClient = httpClient ?? http.Client();
+  }) : clientInstanceId =
+           clientInstanceId ??
+           'flutter-remote-${DateTime.now().millisecondsSinceEpoch}',
+       _httpClient = httpClient ?? http.Client();
 
   @override
   TransportType get transportType => TransportType.p2p;
@@ -146,8 +144,10 @@ class WebRtcMeshClient implements TransportClient {
   @override
   bool get isConnected =>
       ((_dataChannel?.state == RTCDataChannelState.RTCDataChannelOpen) ||
-          (_cascadeDataChannel?.state == RTCDataChannelState.RTCDataChannelOpen) ||
-          (_terminalDataChannel?.state == RTCDataChannelState.RTCDataChannelOpen)) &&
+          (_cascadeDataChannel?.state ==
+              RTCDataChannelState.RTCDataChannelOpen) ||
+          (_terminalDataChannel?.state ==
+              RTCDataChannelState.RTCDataChannelOpen)) &&
       _isChannelAuthenticated;
 
   @override
@@ -204,8 +204,9 @@ class WebRtcMeshClient implements TransportClient {
       _peerConnection!.onIceCandidate = (RTCIceCandidate candidate) async {
         if (candidate.candidate == null || candidate.candidate!.isEmpty) return;
         try {
-          final sendSignalingUrl =
-              Uri.parse('$baseUrl${ApiEndpoints.sendSignalingMessage}');
+          final sendSignalingUrl = Uri.parse(
+            '$baseUrl${ApiEndpoints.sendSignalingMessage}',
+          );
           await _httpClient.post(
             sendSignalingUrl,
             headers: {
@@ -236,28 +237,48 @@ class WebRtcMeshClient implements TransportClient {
         'proxy-channel',
         dcInit,
       );
-      _setupDataChannelListeners(_dataChannel!, 'proxy-channel', _proxyAccumulator);
+      _setupDataChannelListeners(
+        _dataChannel!,
+        'proxy-channel',
+        _proxyAccumulator,
+      );
 
       _cascadeDataChannel = await _peerConnection!.createDataChannel(
         'cascade-channel',
         dcInit,
       );
-      _setupDataChannelListeners(_cascadeDataChannel!, 'cascade-channel', _cascadeAccumulator);
+      _setupDataChannelListeners(
+        _cascadeDataChannel!,
+        'cascade-channel',
+        _cascadeAccumulator,
+      );
 
       _terminalDataChannel = await _peerConnection!.createDataChannel(
         'terminal-channel',
         dcInit,
       );
-      _setupDataChannelListeners(_terminalDataChannel!, 'terminal-channel', _terminalAccumulator);
+      _setupDataChannelListeners(
+        _terminalDataChannel!,
+        'terminal-channel',
+        _terminalAccumulator,
+      );
 
       // 監聽對端反向建立之 DataChannel
       _peerConnection!.onDataChannel = (RTCDataChannel channel) {
         if (channel.label == 'cascade-channel') {
           _cascadeDataChannel = channel;
-          _setupDataChannelListeners(channel, 'cascade-channel', _cascadeAccumulator);
+          _setupDataChannelListeners(
+            channel,
+            'cascade-channel',
+            _cascadeAccumulator,
+          );
         } else if (channel.label == 'terminal-channel') {
           _terminalDataChannel = channel;
-          _setupDataChannelListeners(channel, 'terminal-channel', _terminalAccumulator);
+          _setupDataChannelListeners(
+            channel,
+            'terminal-channel',
+            _terminalAccumulator,
+          );
         } else {
           _dataChannel = channel;
           _setupDataChannelListeners(
@@ -272,8 +293,9 @@ class WebRtcMeshClient implements TransportClient {
       final offer = await _peerConnection!.createOffer();
       await _peerConnection!.setLocalDescription(offer);
 
-      final sendSignalingUrl =
-          Uri.parse('$baseUrl${ApiEndpoints.sendSignalingMessage}');
+      final sendSignalingUrl = Uri.parse(
+        '$baseUrl${ApiEndpoints.sendSignalingMessage}',
+      );
       await _httpClient.post(
         sendSignalingUrl,
         headers: {
@@ -330,7 +352,9 @@ class WebRtcMeshClient implements TransportClient {
     // 1. Channel Binding 握手挑戰與確認處理 (P0 #10: 嚴格認證閘門與狀態機)
     if (_authState != ChannelAuthState.authenticated) {
       // 認證封包必須且只能在控制頻道 (proxy-channel) 且 flag == 0x00 上遞送，杜絕從輔助串流繞過
-      final isControlChannel = (fromChannel == null || fromChannel == 'proxy-channel') && flag == 0x00;
+      final isControlChannel =
+          (fromChannel == null || fromChannel == 'proxy-channel') &&
+          flag == 0x00;
       if (isControlChannel) {
         try {
           final text = utf8.decode(payload);
@@ -361,7 +385,9 @@ class WebRtcMeshClient implements TransportClient {
               _authState = ChannelAuthState.authenticated;
               _isChannelAuthenticated = true;
               final rtt = _challengeSentTime != null
-                  ? DateTime.now().difference(_challengeSentTime!).inMilliseconds
+                  ? DateTime.now()
+                        .difference(_challengeSentTime!)
+                        .inMilliseconds
                   : null;
               _lastLatencyMs = (rtt != null && rtt > 0) ? rtt : null;
               if (!_connectionStatusController.isClosed) {
@@ -414,16 +440,23 @@ class WebRtcMeshClient implements TransportClient {
         if (json is Map) {
           final rawId = json['request_id'] ?? json['requestId'];
           if (rawId != null) {
-            resRequestId = rawId is int ? rawId : int.tryParse(rawId.toString());
+            resRequestId = rawId is int
+                ? rawId
+                : int.tryParse(rawId.toString());
           }
 
           if (json['error'] != null || json['is_error'] == true) {
             isError = true;
-            errorMessage = json['error']?.toString() ?? json['message']?.toString() ?? 'RPC Error';
+            errorMessage =
+                json['error']?.toString() ??
+                json['message']?.toString() ??
+                'RPC Error';
           }
           if (json['status_code'] != null) {
             final rawCode = json['status_code'];
-            statusCode = rawCode is int ? rawCode : int.tryParse(rawCode.toString());
+            statusCode = rawCode is int
+                ? rawCode
+                : int.tryParse(rawCode.toString());
             if (statusCode != null && statusCode != 200) {
               isError = true;
               errorMessage ??= 'RPC Error (HTTP $statusCode)';
@@ -440,7 +473,9 @@ class WebRtcMeshClient implements TransportClient {
               }
             }
           } else if (json.containsKey('payload_text')) {
-            resPayload = Uint8List.fromList(utf8.encode(json['payload_text'].toString()));
+            resPayload = Uint8List.fromList(
+              utf8.encode(json['payload_text'].toString()),
+            );
           }
         }
       } catch (_) {}
@@ -478,7 +513,9 @@ class WebRtcMeshClient implements TransportClient {
       'signature': signatureBase64,
     });
 
-    final frame = frameMessage(Uint8List.fromList(utf8.encode(responsePayload)));
+    final frame = frameMessage(
+      Uint8List.fromList(utf8.encode(responsePayload)),
+    );
     _dataChannel!.send(RTCDataChannelMessage.fromBinary(frame));
   }
 
@@ -487,7 +524,9 @@ class WebRtcMeshClient implements TransportClient {
     _signalingTimer?.cancel();
     int pollElapsedSeconds = 0;
 
-    _signalingTimer = Timer.periodic(const Duration(milliseconds: 1000), (timer) async {
+    _signalingTimer = Timer.periodic(const Duration(milliseconds: 1000), (
+      timer,
+    ) async {
       pollElapsedSeconds++;
       if (_isChannelAuthenticated || _peerConnection == null) {
         timer.cancel();
@@ -504,8 +543,9 @@ class WebRtcMeshClient implements TransportClient {
       }
 
       try {
-        final pollUrl =
-            Uri.parse('$baseUrl${ApiEndpoints.pollSignalingMessages}');
+        final pollUrl = Uri.parse(
+          '$baseUrl${ApiEndpoints.pollSignalingMessages}',
+        );
         final resp = await _httpClient.post(
           pollUrl,
           headers: {
@@ -524,7 +564,8 @@ class WebRtcMeshClient implements TransportClient {
           for (final m in messages) {
             final payloadStr = m['payload'] as String?;
             if (payloadStr != null) {
-              final payloadJson = jsonDecode(payloadStr) as Map<String, dynamic>;
+              final payloadJson =
+                  jsonDecode(payloadStr) as Map<String, dynamic>;
               if (payloadJson['type'] == 'answer') {
                 final sdp = payloadJson['sdp'] as String?;
                 if (sdp != null) {
@@ -544,11 +585,16 @@ class WebRtcMeshClient implements TransportClient {
                 } else if (rawCand is String) {
                   candStr = rawCand;
                   sdpMid = payloadJson['sdpMid']?.toString();
-                  sdpMLineIndex = (payloadJson['sdpMLineIndex'] as num?)?.toInt();
+                  sdpMLineIndex = (payloadJson['sdpMLineIndex'] as num?)
+                      ?.toInt();
                 }
 
                 if (candStr != null && candStr.isNotEmpty) {
-                  final candidate = RTCIceCandidate(candStr, sdpMid, sdpMLineIndex);
+                  final candidate = RTCIceCandidate(
+                    candStr,
+                    sdpMid,
+                    sdpMLineIndex,
+                  );
                   await _peerConnection?.addCandidate(candidate);
                 }
               }
@@ -579,7 +625,9 @@ class WebRtcMeshClient implements TransportClient {
     if (!isConnected ||
         _dataChannel == null ||
         _dataChannel!.state != RTCDataChannelState.RTCDataChannelOpen) {
-      throw PreFlightException('WebRTC DataChannel is not connected or authenticated');
+      throw PreFlightException(
+        'WebRTC DataChannel is not connected or authenticated',
+      );
     }
 
     final reqId = _requestIdCounter++;
@@ -594,11 +642,17 @@ class WebRtcMeshClient implements TransportClient {
         'payload': base64Encode(payload),
       });
 
-      final frame = frameMessage(Uint8List.fromList(utf8.encode(envelope)), flag: 0x00);
+      final frame = frameMessage(
+        Uint8List.fromList(utf8.encode(envelope)),
+        flag: 0x00,
+      );
       _dataChannel!.send(RTCDataChannelMessage.fromBinary(frame));
     } catch (e) {
       _pendingRequests.remove(reqId);
-      throw PreFlightException('Failed to transmit frame to DataChannel: $e', cause: e);
+      throw PreFlightException(
+        'Failed to transmit frame to DataChannel: $e',
+        cause: e,
+      );
     }
 
     // 封包已成功交付送出至網路 (Committed In-flight)
@@ -607,7 +661,9 @@ class WebRtcMeshClient implements TransportClient {
         const Duration(seconds: 15),
         onTimeout: () {
           _pendingRequests.remove(reqId);
-          throw TimeoutException('P2P DataChannel RPC timeout: $rpcPath (reqId: $reqId)');
+          throw TimeoutException(
+            'P2P DataChannel RPC timeout: $rpcPath (reqId: $reqId)',
+          );
         },
       );
     } catch (e) {
@@ -637,9 +693,11 @@ class WebRtcMeshClient implements TransportClient {
     }
 
     final frame = frameMessage(payload, flag: flag);
-    if (targetDc != null && targetDc.state == RTCDataChannelState.RTCDataChannelOpen) {
+    if (targetDc != null &&
+        targetDc.state == RTCDataChannelState.RTCDataChannelOpen) {
       targetDc.send(RTCDataChannelMessage.fromBinary(frame));
-    } else if (_dataChannel != null && _dataChannel!.state == RTCDataChannelState.RTCDataChannelOpen) {
+    } else if (_dataChannel != null &&
+        _dataChannel!.state == RTCDataChannelState.RTCDataChannelOpen) {
       _dataChannel!.send(RTCDataChannelMessage.fromBinary(frame));
     }
 
@@ -685,7 +743,9 @@ class WebRtcMeshClient implements TransportClient {
 
   void dispose() {
     disconnect();
-    if (!_connectionStatusController.isClosed) _connectionStatusController.close();
+    if (!_connectionStatusController.isClosed) {
+      _connectionStatusController.close();
+    }
     if (!_latencyController.isClosed) _latencyController.close();
     if (!_cascadeStreamController.isClosed) _cascadeStreamController.close();
     if (!_terminalStreamController.isClosed) _terminalStreamController.close();
@@ -703,7 +763,9 @@ class WebRtcMeshClient implements TransportClient {
   @visibleForTesting
   void setChannelAuthenticatedForTesting(bool val) {
     _isChannelAuthenticated = val;
-    _authState = val ? ChannelAuthState.authenticated : ChannelAuthState.unauthenticated;
+    _authState = val
+        ? ChannelAuthState.authenticated
+        : ChannelAuthState.unauthenticated;
   }
 
   @visibleForTesting
@@ -716,11 +778,14 @@ class WebRtcMeshClient implements TransportClient {
   }
 
   @visibleForTesting
-  Map<int, Completer<Uint8List>> get pendingRequestsForTesting => _pendingRequests;
+  Map<int, Completer<Uint8List>> get pendingRequestsForTesting =>
+      _pendingRequests;
 
   @visibleForTesting
-  Stream<Uint8List> get cascadeStreamForTesting => _cascadeStreamController.stream;
+  Stream<Uint8List> get cascadeStreamForTesting =>
+      _cascadeStreamController.stream;
 
   @visibleForTesting
-  Stream<Uint8List> get terminalStreamForTesting => _terminalStreamController.stream;
+  Stream<Uint8List> get terminalStreamForTesting =>
+      _terminalStreamController.stream;
 }

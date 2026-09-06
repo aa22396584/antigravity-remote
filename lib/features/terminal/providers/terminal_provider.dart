@@ -56,7 +56,10 @@ class TerminalNotifier extends Notifier<TerminalState> {
     });
 
     // 切換或刪除裝置時，原子性清理終端緩衝，避免舊機器輸出混淆 (P0 #1)
-    ref.listen(deviceProvider.select((s) => s.activeDevice?.instanceId), (prevId, nextId) {
+    ref.listen(deviceProvider.select((s) => s.activeDevice?.instanceId), (
+      prevId,
+      nextId,
+    ) {
       if (prevId != nextId) {
         clear();
       }
@@ -67,24 +70,22 @@ class TerminalNotifier extends Notifier<TerminalState> {
 
     String initialBanner;
     if (deviceState.isDemoMode) {
-      initialBanner = 'Antigravity Remote Terminal Bridge [Demo Mode]\n'
+      initialBanner =
+          'Antigravity Remote Terminal Bridge [Demo Mode]\n'
           '離線展示模式：模擬終端環境已就緒。\n\n';
     } else if (activeDevice == null) {
-      initialBanner = 'Antigravity Remote Terminal Bridge\n'
+      initialBanner =
+          'Antigravity Remote Terminal Bridge\n'
           '目前未連線至任何遠端實體。請至控制台選取或配對裝置。\n\n';
     } else {
-      initialBanner = 'Antigravity Remote Terminal Bridge\n'
+      initialBanner =
+          'Antigravity Remote Terminal Bridge\n'
           '連線目標: ${activeDevice.name} (${activeDevice.instanceId})\n'
           '傳輸通道: ${deviceState.activeTransport.name.toUpperCase()}\n\n';
     }
 
     return TerminalState(
-      chunks: [
-        TerminalChunk(
-          text: initialBanner,
-          timestamp: DateTime.now(),
-        ),
-      ],
+      chunks: [TerminalChunk(text: initialBanner, timestamp: DateTime.now())],
     );
   }
 
@@ -106,10 +107,7 @@ class TerminalNotifier extends Notifier<TerminalState> {
         isTrimmed: true,
       );
     } else {
-      state = state.copyWith(
-        chunks: updated,
-        isStreaming: true,
-      );
+      state = state.copyWith(chunks: updated, isStreaming: true);
     }
   }
 
@@ -118,10 +116,7 @@ class TerminalNotifier extends Notifier<TerminalState> {
     if (input.isEmpty) return false;
 
     final wireInput = input.endsWith('\n') ? input : '$input\n';
-    final chunk = TerminalChunk(
-      text: wireInput,
-      timestamp: DateTime.now(),
-    );
+    final chunk = TerminalChunk(text: wireInput, timestamp: DateTime.now());
     _appendChunk(chunk);
 
     try {
@@ -144,10 +139,7 @@ class TerminalNotifier extends Notifier<TerminalState> {
     if (rawBytes.isEmpty) return false;
 
     if (displayEcho != null && displayEcho.isNotEmpty) {
-      final chunk = TerminalChunk(
-        text: displayEcho,
-        timestamp: DateTime.now(),
-      );
+      final chunk = TerminalChunk(text: displayEcho, timestamp: DateTime.now());
       _appendChunk(chunk);
     }
 
@@ -197,4 +189,6 @@ class TerminalNotifier extends Notifier<TerminalState> {
   }
 }
 
-final terminalProvider = NotifierProvider<TerminalNotifier, TerminalState>(TerminalNotifier.new);
+final terminalProvider = NotifierProvider<TerminalNotifier, TerminalState>(
+  TerminalNotifier.new,
+);

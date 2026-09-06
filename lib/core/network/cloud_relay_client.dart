@@ -61,14 +61,16 @@ class CloudRelayClient implements TransportClient {
     final sw = Stopwatch()..start();
     try {
       final url = Uri.parse('$baseUrl${ApiEndpoints.listInstances}');
-      final resp = await _httpClient.post(
-        url,
-        headers: {
-          'Authorization': 'Bearer $googleAccessToken',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({'project': 'jetski-remote'}),
-      ).timeout(const Duration(seconds: 5));
+      final resp = await _httpClient
+          .post(
+            url,
+            headers: {
+              'Authorization': 'Bearer $googleAccessToken',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({'project': 'jetski-remote'}),
+          )
+          .timeout(const Duration(seconds: 5));
 
       sw.stop();
       if (resp.statusCode == 200) {
@@ -97,14 +99,16 @@ class CloudRelayClient implements TransportClient {
       ],
     };
 
-    final resp = await _httpClient.post(
-      url,
-      headers: {
-        'Authorization': 'Bearer $googleAccessToken',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode(reqBody),
-    ).timeout(const Duration(seconds: 30));
+    final resp = await _httpClient
+        .post(
+          url,
+          headers: {
+            'Authorization': 'Bearer $googleAccessToken',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode(reqBody),
+        )
+        .timeout(const Duration(seconds: 30));
 
     sw.stop();
     _lastLatencyMs = sw.elapsedMilliseconds;
@@ -114,7 +118,9 @@ class CloudRelayClient implements TransportClient {
       final json = jsonDecode(resp.body) as Map<String, dynamic>;
       if (json['error'] != null || json['is_error'] == true) {
         throw RpcException(
-          json['error']?.toString() ?? json['message']?.toString() ?? 'Cloud Relay RPC error',
+          json['error']?.toString() ??
+              json['message']?.toString() ??
+              'Cloud Relay RPC error',
         );
       }
       final base64Payload = json['payload'] as String?;
@@ -178,7 +184,9 @@ class CloudRelayClient implements TransportClient {
           if (base64Payload != null) {
             yield base64Decode(base64Payload);
           } else if (json['payload_text'] != null) {
-            yield Uint8List.fromList(utf8.encode(json['payload_text'] as String));
+            yield Uint8List.fromList(
+              utf8.encode(json['payload_text'] as String),
+            );
           }
         } catch (_) {
           // If raw chunk

@@ -17,7 +17,8 @@ class RemoteControlService {
   DualTransportManager? _transportManager;
 
   final _messageController = StreamController<CascadeMessage>.broadcast();
-  final _interactionController = StreamController<UserInteractionRequest>.broadcast();
+  final _interactionController =
+      StreamController<UserInteractionRequest>.broadcast();
   final _terminalController = StreamController<TerminalChunk>.broadcast();
 
   // 跨分包 UTF-8 解碼緩衝區，杜絕中文字元或 Emoji 被分包截斷導致亂碼 (Issue #23)
@@ -37,13 +38,14 @@ class RemoteControlService {
   RemoteControlService({
     bool isDemoMode = true,
     DualTransportManager? transportManager,
-  })  : _isDemoMode = isDemoMode,
-        _transportManager = transportManager {
+  }) : _isDemoMode = isDemoMode,
+       _transportManager = transportManager {
     _initListeners();
   }
 
   Stream<CascadeMessage> get messageStream => _messageController.stream;
-  Stream<UserInteractionRequest> get interactionStream => _interactionController.stream;
+  Stream<UserInteractionRequest> get interactionStream =>
+      _interactionController.stream;
   Stream<TerminalChunk> get terminalStream => _terminalController.stream;
 
   bool get isDemoMode => _isDemoMode;
@@ -81,9 +83,8 @@ class RemoteControlService {
       _mockMsgSub = MockAntigravityService.instance.messageStream.listen(
         _messageController.add,
       );
-      _mockInteractSub = MockAntigravityService.instance.interactionStream.listen(
-        _interactionController.add,
-      );
+      _mockInteractSub = MockAntigravityService.instance.interactionStream
+          .listen(_interactionController.add);
       _mockTermSub = MockAntigravityService.instance.terminalStream.listen(
         _terminalController.add,
       );
@@ -112,10 +113,7 @@ class RemoteControlService {
     // 1. 組裝發送請求
     final reqPayload = jsonEncode({
       'cascadeId': cascadeId,
-      'message': {
-        'role': 'MESSAGE_ROLE_USER',
-        'text': trimmed,
-      },
+      'message': {'role': 'MESSAGE_ROLE_USER', 'text': trimmed},
     });
 
     // 2. 透過雙軌自適應調度發送
@@ -181,7 +179,8 @@ class RemoteControlService {
     // 若有 5-byte 分幀前綴，剔除頭部（相容 0x00..0x0F 頻道多工旗標）
     Uint8List payload = rawBytes;
     if (rawBytes.length >= 5 && rawBytes[0] <= 0x0F) {
-      final len = (rawBytes[1] << 24) |
+      final len =
+          (rawBytes[1] << 24) |
           (rawBytes[2] << 16) |
           (rawBytes[3] << 8) |
           rawBytes[4];
@@ -215,7 +214,8 @@ class RemoteControlService {
 
       // 2. 步驟更新
       if (json['step'] != null || json['trajectory_step'] != null) {
-        final stepMap = (json['step'] ?? json['trajectory_step']) as Map<String, dynamic>;
+        final stepMap =
+            (json['step'] ?? json['trajectory_step']) as Map<String, dynamic>;
         final step = TrajectoryStep.fromJson(stepMap);
         final steps = List<TrajectoryStep>.from(msg.trajectorySteps);
         final idx = steps.indexWhere((s) => s.stepId == step.stepId);
@@ -227,7 +227,8 @@ class RemoteControlService {
         msg = msg.copyWith(trajectorySteps: steps);
 
         // 若需要審批
-        if (step.interaction != null && step.status == StepStatus.waitingUserInteraction) {
+        if (step.interaction != null &&
+            step.status == StepStatus.waitingUserInteraction) {
           _interactionController.add(step.interaction!);
         }
       }
@@ -305,7 +306,10 @@ class RemoteControlService {
       // TerminalNotifier 在 UI 端已進行本地輸入回顯 (Local Echo)，
       // 在此僅模擬終端命令的回應輸出，絕不重複回顯使用者的原始輸入字串
       final trimmed = input.trim();
-      if (trimmed.isNotEmpty && trimmed != '\x03' && trimmed != '\n' && trimmed != '\t') {
+      if (trimmed.isNotEmpty &&
+          trimmed != '\x03' &&
+          trimmed != '\n' &&
+          trimmed != '\t') {
         _simulateDemoTerminalResponse(trimmed);
       }
       return;
@@ -331,21 +335,22 @@ class RemoteControlService {
         } else if (cmd == 'whoami') {
           response = 'iml1s (local engineer)\n';
         } else if (cmd == 'git status') {
-          response = 'On branch main\nYour branch is up to date with \'origin/main\'.\nnothing to commit, working tree clean\n';
+          response =
+              'On branch main\nYour branch is up to date with \'origin/main\'.\nnothing to commit, working tree clean\n';
         } else if (cmd.startsWith('flutter test')) {
           response = '00:01 +3: All tests passed!\n';
         } else if (cmd == 'ls' || cmd == 'ls -la') {
-          response = 'drwxr-xr-x  12 iml1s  staff   384 Mar  6 12:00 .\n'
+          response =
+              'drwxr-xr-x  12 iml1s  staff   384 Mar  6 12:00 .\n'
               '-rw-r--r--   1 iml1s  staff  4169 Mar  6 12:00 pubspec.yaml\n'
               'drwxr-xr-x   8 iml1s  staff   256 Mar  6 12:00 lib\n'
               'drwxr-xr-x   6 iml1s  staff   192 Mar  6 12:00 test\n';
         } else {
           response = '[demo-sh] executed: $cmd\n';
         }
-        _terminalController.add(TerminalChunk(
-          text: response,
-          timestamp: DateTime.now(),
-        ));
+        _terminalController.add(
+          TerminalChunk(text: response, timestamp: DateTime.now()),
+        );
       }
     });
   }
@@ -365,28 +370,27 @@ class RemoteControlService {
         (data) {
           Uint8List payload = data;
           if (data.length >= 5 && data[0] <= 0x0F) {
-            final len = (data[1] << 24) |
-                (data[2] << 16) |
-                (data[3] << 8) |
-                data[4];
+            final len =
+                (data[1] << 24) | (data[2] << 16) | (data[3] << 8) | data[4];
             if (len >= 0 && data.length >= 5 + len) {
               payload = data.sublist(5, 5 + len);
             }
           }
           final text = _terminalUtf8Decoder.decodeChunk(payload);
           if (text.isNotEmpty) {
-            _terminalController.add(TerminalChunk(
-              text: text,
-              timestamp: DateTime.now(),
-            ));
+            _terminalController.add(
+              TerminalChunk(text: text, timestamp: DateTime.now()),
+            );
           }
         },
         onError: (err) {
-          _terminalController.add(TerminalChunk(
-            text: '\n[連線日誌] 終端串流發生異常: $err\n',
-            isError: true,
-            timestamp: DateTime.now(),
-          ));
+          _terminalController.add(
+            TerminalChunk(
+              text: '\n[連線日誌] 終端串流發生異常: $err\n',
+              isError: true,
+              timestamp: DateTime.now(),
+            ),
+          );
         },
       );
     } catch (_) {}

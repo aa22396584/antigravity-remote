@@ -19,49 +19,59 @@ void main() {
       expect(storage.getAccessToken(), isNull);
     });
 
-    test('setAccessToken encrypts token with AES-256-GCM and does not leak plaintext', () async {
-      final prefs = await SharedPreferences.getInstance();
-      final storage = StorageService(prefs);
+    test(
+      'setAccessToken encrypts token with AES-256-GCM and does not leak plaintext',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        final storage = StorageService(prefs);
 
-      const secretToken = 'ya29.a0AfH6SMA-super-sensitive-oauth-token-12345';
-      await storage.setAccessToken(secretToken);
+        const secretToken = 'ya29.a0AfH6SMA-super-sensitive-oauth-token-12345';
+        await storage.setAccessToken(secretToken);
 
-      // Verify that the raw SharedPreferences string is encrypted
-      final rawStored = prefs.getString('ag_access_token');
-      expect(rawStored, isNotNull);
-      expect(rawStored!.startsWith('enc:v1:'), isTrue);
-      expect(rawStored.contains(secretToken), isFalse);
+        // Verify that the raw SharedPreferences string is encrypted
+        final rawStored = prefs.getString('ag_access_token');
+        expect(rawStored, isNotNull);
+        expect(rawStored!.startsWith('enc:v1:'), isTrue);
+        expect(rawStored.contains(secretToken), isFalse);
 
-      // Verify that getAccessToken correctly decrypts it
-      final decrypted = storage.getAccessToken();
-      expect(decrypted, secretToken);
-    });
+        // Verify that getAccessToken correctly decrypts it
+        final decrypted = storage.getAccessToken();
+        expect(decrypted, secretToken);
+      },
+    );
 
-    test('getAccessToken provides backward compatibility with legacy plaintext tokens', () async {
-      SharedPreferences.setMockInitialValues({
-        'ag_access_token': 'ya29.legacy-unencrypted-token-value',
-      });
-      final prefs = await SharedPreferences.getInstance();
-      final storage = StorageService(prefs);
+    test(
+      'getAccessToken provides backward compatibility with legacy plaintext tokens',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          'ag_access_token': 'ya29.legacy-unencrypted-token-value',
+        });
+        final prefs = await SharedPreferences.getInstance();
+        final storage = StorageService(prefs);
 
-      // Legacy token without 'enc:v1:' prefix should be returned directly
-      expect(storage.getAccessToken(), 'ya29.legacy-unencrypted-token-value');
-    });
+        // Legacy token without 'enc:v1:' prefix should be returned directly
+        expect(storage.getAccessToken(), 'ya29.legacy-unencrypted-token-value');
+      },
+    );
 
-    test('getAccessToken gracefully returns null on tampered ciphertext', () async {
-      final prefs = await SharedPreferences.getInstance();
-      final storage = StorageService(prefs);
+    test(
+      'getAccessToken gracefully returns null on tampered ciphertext',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        final storage = StorageService(prefs);
 
-      await storage.setAccessToken('sensitive-token');
-      final validEncrypted = prefs.getString('ag_access_token')!;
+        await storage.setAccessToken('sensitive-token');
+        final validEncrypted = prefs.getString('ag_access_token')!;
 
-      // Tamper with the ciphertext/MAC payload
-      final tampered = '${validEncrypted.substring(0, validEncrypted.length - 6)}AAAAAA';
-      await prefs.setString('ag_access_token', tampered);
+        // Tamper with the ciphertext/MAC payload
+        final tampered =
+            '${validEncrypted.substring(0, validEncrypted.length - 6)}AAAAAA';
+        await prefs.setString('ag_access_token', tampered);
 
-      // Decryption MAC validation failure should return null without crashing
-      expect(storage.getAccessToken(), isNull);
-    });
+        // Decryption MAC validation failure should return null without crashing
+        expect(storage.getAccessToken(), isNull);
+      },
+    );
 
     test('clearAccessToken removes the token', () async {
       final prefs = await SharedPreferences.getInstance();
@@ -75,17 +85,20 @@ void main() {
       expect(prefs.containsKey('ag_access_token'), isFalse);
     });
 
-    test('setAccessToken with empty string automatically clears the token', () async {
-      final prefs = await SharedPreferences.getInstance();
-      final storage = StorageService(prefs);
+    test(
+      'setAccessToken with empty string automatically clears the token',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        final storage = StorageService(prefs);
 
-      await storage.setAccessToken('temporary-token');
-      expect(storage.getAccessToken(), 'temporary-token');
+        await storage.setAccessToken('temporary-token');
+        expect(storage.getAccessToken(), 'temporary-token');
 
-      await storage.setAccessToken('');
-      expect(storage.getAccessToken(), isNull);
-      expect(prefs.containsKey('ag_access_token'), isFalse);
-    });
+        await storage.setAccessToken('');
+        expect(storage.getAccessToken(), isNull);
+        expect(prefs.containsKey('ag_access_token'), isFalse);
+      },
+    );
 
     test('stores and retrieves environment and demo mode', () async {
       final prefs = await SharedPreferences.getInstance();

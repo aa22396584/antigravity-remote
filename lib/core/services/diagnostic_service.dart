@@ -61,22 +61,33 @@ class DiagnosticService {
     );
     // 遮蔽 Authorization header
     result = result.replaceAllMapped(
-      RegExp(r'''(["']?authorization["']?\s*:\s*["'])([^"'\r\n]+)(["'])''', caseSensitive: false),
+      RegExp(
+        r'''(["']?authorization["']?\s*:\s*["'])([^"'\r\n]+)(["'])''',
+        caseSensitive: false,
+      ),
       (m) => '${m.group(1)}[REDACTED]${m.group(3)}',
     );
     // 遮蔽 Cookie 敏感資訊 (Issue #32)
     result = result.replaceAllMapped(
-      RegExp(r'''(["']?cookie["']?\s*:\s*["'])([^"'\r\n]+)(["'])''', caseSensitive: false),
+      RegExp(
+        r'''(["']?cookie["']?\s*:\s*["'])([^"'\r\n]+)(["'])''',
+        caseSensitive: false,
+      ),
       (m) => '${m.group(1)}[REDACTED_COOKIE]${m.group(3)}',
     );
     // 遮蔽 Password 敏感資訊
     result = result.replaceAllMapped(
-      RegExp(r'''(["']?password["']?\s*:\s*["'])([^"'\r\n]+)(["'])''', caseSensitive: false),
+      RegExp(
+        r'''(["']?password["']?\s*:\s*["'])([^"'\r\n]+)(["'])''',
+        caseSensitive: false,
+      ),
       (m) => '${m.group(1)}[REDACTED_PASSWORD]${m.group(3)}',
     );
     // 遮蔽 private key 特徵
     result = result.replaceAllMapped(
-      RegExp(r'-----BEGIN [A-Z ]+ PRIVATE KEY-----[^-]+-----END [A-Z ]+ PRIVATE KEY-----'),
+      RegExp(
+        r'-----BEGIN [A-Z ]+ PRIVATE KEY-----[^-]+-----END [A-Z ]+ PRIVATE KEY-----',
+      ),
       (m) => '[REDACTED_PRIVATE_KEY]',
     );
     return result;
@@ -99,7 +110,9 @@ class DiagnosticService {
     buffer.writeln('Mode: ${isDemoMode ? "Demo Mode" : "Live Mode"}');
     buffer.writeln('Environment: $environment');
     buffer.writeln('Configured Devices: $deviceCount');
-    buffer.writeln('Notice: All authentication tokens and private keys are sanitized.');
+    buffer.writeln(
+      'Notice: All authentication tokens and private keys are sanitized.',
+    );
     buffer.writeln('--------------------------------------------');
     buffer.writeln('Recent Events (${_logs.length}):');
     for (final entry in _logs) {

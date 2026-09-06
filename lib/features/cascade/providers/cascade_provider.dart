@@ -60,7 +60,10 @@ class CascadeNotifier extends Notifier<CascadeState> {
     });
 
     // 切換或刪除裝置時，原子性清理畫面上的舊對話與待審批狀態，避免操作送到舊機器 (P0 #1)
-    ref.listen(deviceProvider.select((s) => s.activeDevice?.instanceId), (prevId, nextId) {
+    ref.listen(deviceProvider.select((s) => s.activeDevice?.instanceId), (
+      prevId,
+      nextId,
+    ) {
       if (prevId != nextId) {
         clearConversation();
       }
@@ -75,7 +78,8 @@ class CascadeNotifier extends Notifier<CascadeState> {
         id: 'msg-welcome',
         cascadeId: 'cascade-main',
         role: MessageRole.assistant,
-        content: '### 🧪 Antigravity 遠端控制中樞已就緒 (展示模式 Demo Mode)\n\n'
+        content:
+            '### 🧪 Antigravity 遠端控制中樞已就緒 (展示模式 Demo Mode)\n\n'
             '目前處於離線展示環境，所有操作皆為本機模擬，不會向真實遠端電腦發送指令。\n'
             '您可在此體驗完整 Prompt 思考、指令審批與虛擬終端互動。',
         thinking: '展示環境已就緒。\n模擬本機 Agent 連線與審批互動。',
@@ -88,7 +92,8 @@ class CascadeNotifier extends Notifier<CascadeState> {
         id: 'msg-welcome',
         cascadeId: 'cascade-main',
         role: MessageRole.assistant,
-        content: '### 🚀 Antigravity 遠端控制中樞\n\n'
+        content:
+            '### 🚀 Antigravity 遠端控制中樞\n\n'
             '尚未連線至遠端 Antigravity 實體。\n'
             '請在「裝置列表」中配對或選取欲連線控制的電腦。',
         thinking: '等待選擇遠端連線目標...',
@@ -96,12 +101,15 @@ class CascadeNotifier extends Notifier<CascadeState> {
         timestamp: DateTime.now(),
       );
     } else {
-      final latText = deviceState.currentLatencyMs != null ? '${deviceState.currentLatencyMs}ms' : '—';
+      final latText = deviceState.currentLatencyMs != null
+          ? '${deviceState.currentLatencyMs}ms'
+          : '—';
       welcomeMsg = CascadeMessage(
         id: 'msg-welcome',
         cascadeId: 'cascade-main',
         role: MessageRole.assistant,
-        content: '### 🚀 Antigravity 遠端控制中樞已就緒\n\n'
+        content:
+            '### 🚀 Antigravity 遠端控制中樞已就緒\n\n'
             '連線目標實體 ID: `${activeDevice.instanceId}`\n'
             '傳輸通道: ${deviceState.activeTransport.name.toUpperCase()} (實測延遲: $latText)\n\n'
             '您可以在此監控 Agent 執行、核准終端指令與引導編程。',
@@ -122,10 +130,7 @@ class CascadeNotifier extends Notifier<CascadeState> {
     } else {
       list.add(msg);
     }
-    state = state.copyWith(
-      messages: list,
-      isStreaming: msg.isStreaming,
-    );
+    state = state.copyWith(messages: list, isStreaming: msg.isStreaming);
   }
 
   /// 發送使用者訊息 / Prompt (包含交付狀態追蹤與錯誤保留 - Issue #19)
@@ -159,10 +164,7 @@ class CascadeNotifier extends Notifier<CascadeState> {
       return true;
     } catch (e) {
       _updateMessageDeliveryStatus(userMsgId, MessageDeliveryStatus.failed);
-      state = state.copyWith(
-        isStreaming: false,
-        errorMessage: '發送訊息失敗: $e',
-      );
+      state = state.copyWith(isStreaming: false, errorMessage: '發送訊息失敗: $e');
       return false;
     }
   }
@@ -196,10 +198,7 @@ class CascadeNotifier extends Notifier<CascadeState> {
       _updateMessageDeliveryStatus(messageId, MessageDeliveryStatus.confirmed);
     } catch (e) {
       _updateMessageDeliveryStatus(messageId, MessageDeliveryStatus.failed);
-      state = state.copyWith(
-        isStreaming: false,
-        errorMessage: '重試發送失敗: $e',
-      );
+      state = state.copyWith(isStreaming: false, errorMessage: '重試發送失敗: $e');
     }
   }
 
@@ -242,7 +241,9 @@ class CascadeNotifier extends Notifier<CascadeState> {
         final updatedSteps = m.trajectorySteps.map((s) {
           if (s.interaction?.interactionId == interactionId) {
             final updatedReq = s.interaction!.copyWith(
-              status: approved ? InteractionStatus.approved : InteractionStatus.rejected,
+              status: approved
+                  ? InteractionStatus.approved
+                  : InteractionStatus.rejected,
               userFeedback: feedback,
             );
             return s.copyWith(
@@ -257,14 +258,13 @@ class CascadeNotifier extends Notifier<CascadeState> {
 
       state = state.copyWith(
         messages: updatedMessages,
-        clearPendingInteraction: state.pendingInteraction?.interactionId == interactionId,
+        clearPendingInteraction:
+            state.pendingInteraction?.interactionId == interactionId,
         clearError: true,
       );
     } catch (e) {
       // 3. 遠端返回錯誤或逾時：嚴禁清空待審批狀態，嚴禁標註步驟完成！
-      state = state.copyWith(
-        errorMessage: '審批提交失敗，遠端未確認執行: $e',
-      );
+      state = state.copyWith(errorMessage: '審批提交失敗，遠端未確認執行: $e');
       rethrow;
     } finally {
       _inFlightApprovals.remove(interactionId);
@@ -272,10 +272,7 @@ class CascadeNotifier extends Notifier<CascadeState> {
   }
 
   void clearConversation() {
-    state = state.copyWith(
-      messages: [],
-      clearPendingInteraction: true,
-    );
+    state = state.copyWith(messages: [], clearPendingInteraction: true);
   }
 
   void removeMessage(String messageId) {
@@ -289,4 +286,6 @@ class CascadeNotifier extends Notifier<CascadeState> {
   }
 }
 
-final cascadeProvider = NotifierProvider<CascadeNotifier, CascadeState>(CascadeNotifier.new);
+final cascadeProvider = NotifierProvider<CascadeNotifier, CascadeState>(
+  CascadeNotifier.new,
+);

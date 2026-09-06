@@ -29,7 +29,10 @@ void main() {
       expect(restored.transport, TransportType.p2p);
       expect(restored.latencyMs, 12);
 
-      final updated = dev.copyWith(latencyMs: 18, transport: TransportType.relay);
+      final updated = dev.copyWith(
+        latencyMs: 18,
+        transport: TransportType.relay,
+      );
       expect(updated.latencyMs, 18);
       expect(updated.transport, TransportType.relay);
     });
@@ -129,29 +132,32 @@ void main() {
       expect(restored.isError, isFalse);
     });
 
-    test('TrajectoryStep fromJson handles snake_case keys and flexible enums', () {
-      final json = {
-        'step_id': 'step-snake-01',
-        'type': 'tool_call',
-        'tool_name': 'run_command',
-        'summary': '執行編譯',
-        'description': '編譯目標平台二進位檔',
-        'args': {'cmd': 'flutter build'},
-        'code_diff': '@@ -1 +1 @@\n+patched',
-        'output': 'Build success',
-        'status': 'waiting_user_interaction',
-        'execution_duration_ms': 550,
-      };
+    test(
+      'TrajectoryStep fromJson handles snake_case keys and flexible enums',
+      () {
+        final json = {
+          'step_id': 'step-snake-01',
+          'type': 'tool_call',
+          'tool_name': 'run_command',
+          'summary': '執行編譯',
+          'description': '編譯目標平台二進位檔',
+          'args': {'cmd': 'flutter build'},
+          'code_diff': '@@ -1 +1 @@\n+patched',
+          'output': 'Build success',
+          'status': 'waiting_user_interaction',
+          'execution_duration_ms': 550,
+        };
 
-      final step = TrajectoryStep.fromJson(json);
-      expect(step.stepId, 'step-snake-01');
-      expect(step.type, StepType.toolCall);
-      expect(step.toolName, 'run_command');
-      expect(step.arguments['cmd'], 'flutter build');
-      expect(step.codeDiff, '@@ -1 +1 @@\n+patched');
-      expect(step.status, StepStatus.waitingUserInteraction);
-      expect(step.executionDuration?.inMilliseconds, 550);
-    });
+        final step = TrajectoryStep.fromJson(json);
+        expect(step.stepId, 'step-snake-01');
+        expect(step.type, StepType.toolCall);
+        expect(step.toolName, 'run_command');
+        expect(step.arguments['cmd'], 'flutter build');
+        expect(step.codeDiff, '@@ -1 +1 @@\n+patched');
+        expect(step.status, StepStatus.waitingUserInteraction);
+        expect(step.executionDuration?.inMilliseconds, 550);
+      },
+    );
 
     test('UserInteractionRequest fromJson handles snake_case keys', () {
       final json = {
@@ -200,37 +206,43 @@ void main() {
       expect(msg.isStreaming, isTrue);
     });
 
-    test('TrajectoryStep fromJson accurately handles gRPC uppercase prefixed enums and untyped maps', () {
-      final json = {
-        'step_id': 'grpc-step-1',
-        'type': 'STEP_TYPE_FILE_CHANGE',
-        'status': 'STEP_STATUS_WAITING_USER_INTERACTION',
-        'arguments': <dynamic, dynamic>{'path': 'lib/main.dart', 'lines': 42},
-      };
+    test(
+      'TrajectoryStep fromJson accurately handles gRPC uppercase prefixed enums and untyped maps',
+      () {
+        final json = {
+          'step_id': 'grpc-step-1',
+          'type': 'STEP_TYPE_FILE_CHANGE',
+          'status': 'STEP_STATUS_WAITING_USER_INTERACTION',
+          'arguments': <dynamic, dynamic>{'path': 'lib/main.dart', 'lines': 42},
+        };
 
-      final step = TrajectoryStep.fromJson(json);
-      expect(step.stepId, 'grpc-step-1');
-      expect(step.type, StepType.fileChange);
-      expect(step.status, StepStatus.waitingUserInteraction);
-      expect(step.arguments['path'], 'lib/main.dart');
-      expect(step.arguments['lines'], 42);
-    });
+        final step = TrajectoryStep.fromJson(json);
+        expect(step.stepId, 'grpc-step-1');
+        expect(step.type, StepType.fileChange);
+        expect(step.status, StepStatus.waitingUserInteraction);
+        expect(step.arguments['path'], 'lib/main.dart');
+        expect(step.arguments['lines'], 42);
+      },
+    );
 
-    test('UserInteractionRequest fromJson accurately handles gRPC uppercase prefixed enums and int/str bools', () {
-      final json = {
-        'interaction_id': 'grpc-req-2',
-        'interaction_type': 'USER_INTERACTION_TYPE_ASK_QUESTION',
-        'interaction_status': 'INTERACTION_STATUS_APPROVED',
-        'is_multi_select': 1,
-        'is_destructive': 'true',
-      };
+    test(
+      'UserInteractionRequest fromJson accurately handles gRPC uppercase prefixed enums and int/str bools',
+      () {
+        final json = {
+          'interaction_id': 'grpc-req-2',
+          'interaction_type': 'USER_INTERACTION_TYPE_ASK_QUESTION',
+          'interaction_status': 'INTERACTION_STATUS_APPROVED',
+          'is_multi_select': 1,
+          'is_destructive': 'true',
+        };
 
-      final req = UserInteractionRequest.fromJson(json);
-      expect(req.interactionId, 'grpc-req-2');
-      expect(req.type, UserInteractionType.askQuestion);
-      expect(req.status, InteractionStatus.approved);
-      expect(req.isMultiSelect, isTrue);
-      expect(req.isDestructive, isTrue);
-    });
+        final req = UserInteractionRequest.fromJson(json);
+        expect(req.interactionId, 'grpc-req-2');
+        expect(req.type, UserInteractionType.askQuestion);
+        expect(req.status, InteractionStatus.approved);
+        expect(req.isMultiSelect, isTrue);
+        expect(req.isDestructive, isTrue);
+      },
+    );
   });
 }

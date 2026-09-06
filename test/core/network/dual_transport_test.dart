@@ -13,11 +13,11 @@ class FakeRelayClient extends CloudRelayClient {
   bool isDisposed = false;
 
   FakeRelayClient()
-      : super(
-          baseUrl: 'https://cloudcode-pa.googleapis.com',
-          googleAccessToken: 'test-token',
-          targetInstanceUuid: 'uuid-1',
-        );
+    : super(
+        baseUrl: 'https://cloudcode-pa.googleapis.com',
+        googleAccessToken: 'test-token',
+        targetInstanceUuid: 'uuid-1',
+      );
 
   @override
   Future<void> connect() async {}
@@ -44,11 +44,11 @@ class FakeMeshClient extends WebRtcMeshClient {
   final StreamController<bool> _statusCtrl = StreamController<bool>.broadcast();
 
   FakeMeshClient()
-      : super(
-          baseUrl: 'https://cloudcode-pa.googleapis.com',
-          googleAccessToken: 'test-token',
-          targetInstanceUuid: 'uuid-1',
-        );
+    : super(
+        baseUrl: 'https://cloudcode-pa.googleapis.com',
+        googleAccessToken: 'test-token',
+        targetInstanceUuid: 'uuid-1',
+      );
 
   @override
   bool get isConnected => mockConnected;
@@ -113,7 +113,10 @@ void main() {
 
       expect(manager.currentTransport, TransportType.relay);
 
-      final result = await manager.callUnary('/test.Rpc', Uint8List.fromList(utf8.encode('Hello')));
+      final result = await manager.callUnary(
+        '/test.Rpc',
+        Uint8List.fromList(utf8.encode('Hello')),
+      );
       expect(utf8.decode(result), 'Relay Response');
 
       await manager.disconnect();
@@ -136,60 +139,66 @@ void main() {
       expect(manager.currentTransport, TransportType.offline);
     });
 
-    test('automatically routes to P2P when connected and falls back to Relay when P2P fails', () async {
-      final fakeRelay = FakeRelayClient();
-      final fakeMesh = FakeMeshClient();
+    test(
+      'automatically routes to P2P when connected and falls back to Relay when P2P fails',
+      () async {
+        final fakeRelay = FakeRelayClient();
+        final fakeMesh = FakeMeshClient();
 
-      final manager = DualTransportManager(
-        relayClient: fakeRelay,
-        meshClient: fakeMesh,
-      );
-      addTearDown(manager.dispose);
+        final manager = DualTransportManager(
+          relayClient: fakeRelay,
+          meshClient: fakeMesh,
+        );
+        addTearDown(manager.dispose);
 
-      await manager.connectAll();
-      expect(manager.currentTransport, TransportType.relay);
+        await manager.connectAll();
+        expect(manager.currentTransport, TransportType.relay);
 
-      // P2P becomes connected
-      fakeMesh.mockConnected = true;
-      final p2pRes = await manager.callUnary('/test.Rpc', Uint8List(0));
-      expect(utf8.decode(p2pRes), 'Mesh P2P Response');
-      expect(manager.currentTransport, TransportType.p2p);
+        // P2P becomes connected
+        fakeMesh.mockConnected = true;
+        final p2pRes = await manager.callUnary('/test.Rpc', Uint8List(0));
+        expect(utf8.decode(p2pRes), 'Mesh P2P Response');
+        expect(manager.currentTransport, TransportType.p2p);
 
-      // P2P disconnects / fails, automatically falls back to Relay
-      fakeMesh.mockConnected = false;
-      final fallbackRes = await manager.callUnary('/test.Rpc', Uint8List(0));
-      expect(utf8.decode(fallbackRes), 'Relay Fallback Response');
-      expect(manager.currentTransport, TransportType.relay);
-    });
+        // P2P disconnects / fails, automatically falls back to Relay
+        fakeMesh.mockConnected = false;
+        final fallbackRes = await manager.callUnary('/test.Rpc', Uint8List(0));
+        expect(utf8.decode(fallbackRes), 'Relay Fallback Response');
+        expect(manager.currentTransport, TransportType.relay);
+      },
+    );
 
-    test('schedules reconnect with exponential backoff on P2P disconnection', () async {
-      final fakeRelay = FakeRelayClient();
-      final fakeMesh = FakeMeshClient();
+    test(
+      'schedules reconnect with exponential backoff on P2P disconnection',
+      () async {
+        final fakeRelay = FakeRelayClient();
+        final fakeMesh = FakeMeshClient();
 
-      final manager = DualTransportManager(
-        relayClient: fakeRelay,
-        meshClient: fakeMesh,
-      );
-      addTearDown(manager.dispose);
+        final manager = DualTransportManager(
+          relayClient: fakeRelay,
+          meshClient: fakeMesh,
+        );
+        addTearDown(manager.dispose);
 
-      await manager.connectAll();
-      expect(manager.reconnectAttempts, 0);
+        await manager.connectAll();
+        expect(manager.reconnectAttempts, 0);
 
-      // P2P connects
-      fakeMesh.emitStatus(true);
-      await Future.delayed(Duration.zero);
-      expect(manager.currentTransport, TransportType.p2p);
+        // P2P connects
+        fakeMesh.emitStatus(true);
+        await Future.delayed(Duration.zero);
+        expect(manager.currentTransport, TransportType.p2p);
 
-      // P2P drops
-      fakeMesh.emitStatus(false);
-      await Future.delayed(Duration.zero);
-      expect(manager.currentTransport, TransportType.relay);
+        // P2P drops
+        fakeMesh.emitStatus(false);
+        await Future.delayed(Duration.zero);
+        expect(manager.currentTransport, TransportType.relay);
 
-      // Verify reconnect attempt is reset on manual disconnect
-      await manager.disconnect();
-      expect(manager.reconnectAttempts, 0);
-      expect(manager.currentTransport, TransportType.offline);
-    });
+        // Verify reconnect attempt is reset on manual disconnect
+        await manager.disconnect();
+        expect(manager.reconnectAttempts, 0);
+        expect(manager.currentTransport, TransportType.offline);
+      },
+    );
 
     test('successful P2P connection resets reconnectAttempts to 0', () async {
       final fakeRelay = FakeRelayClient();

@@ -43,16 +43,19 @@ void main() {
       );
     });
 
-    test('throws ProtocolException on invalid negative or excessive length', () {
-      final invalidLen = Uint8List.fromList([
-        0x00,
-        0x80, 0x00, 0x00, 0x00, // Negative or overflow length
-        0x01,
-      ]);
-      expect(
-        () => FrameDecoder.decodeSingleFrame(invalidLen),
-        throwsA(isA<ProtocolException>()),
-      );
-    });
+    test(
+      'throws ProtocolException on invalid negative or excessive length',
+      () {
+        final invalidLen = Uint8List.fromList([
+          0x00,
+          0x80, 0x00, 0x00, 0x00, // Negative or overflow length
+          0x01,
+        ]);
+        expect(
+          () => FrameDecoder.decodeSingleFrame(invalidLen),
+          throwsA(isA<ProtocolException>()),
+        );
+      },
+    );
   });
 }
