@@ -32,7 +32,9 @@ class DualTransportManager {
     _relayLatencySub = relayClient.latencyStream.listen((lat) {
       if (_currentTransport == TransportType.relay) {
         _currentLatencyMs = lat;
-        _latencyController.add(lat);
+        if (!_latencyController.isClosed) {
+          _latencyController.add(lat);
+        }
       }
     });
 
@@ -40,7 +42,9 @@ class DualTransportManager {
       _meshLatencySub = meshClient!.latencyStream.listen((lat) {
         if (_currentTransport == TransportType.p2p) {
           _currentLatencyMs = lat;
-          _latencyController.add(lat);
+          if (!_latencyController.isClosed) {
+            _latencyController.add(lat);
+          }
         }
       });
     }
@@ -71,7 +75,9 @@ class DualTransportManager {
 
   void _setTransport(TransportType type) {
     _currentTransport = type;
-    _transportController.add(type);
+    if (!_transportController.isClosed) {
+      _transportController.add(type);
+    }
   }
 
   /// 智慧自適應呼叫（優先 P2P，Fallback Cloud Relay）
@@ -117,9 +123,13 @@ class DualTransportManager {
     _setTransport(TransportType.offline);
   }
 
-  void dispose() {
-    disconnect();
-    _transportController.close();
-    _latencyController.close();
+  Future<void> dispose() async {
+    await disconnect();
+    if (!_transportController.isClosed) {
+      await _transportController.close();
+    }
+    if (!_latencyController.isClosed) {
+      await _latencyController.close();
+    }
   }
 }

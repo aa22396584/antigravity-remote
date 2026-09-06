@@ -117,6 +117,10 @@ class CloudRelayClient implements TransportClient {
       if (base64Payload != null) {
         return base64Decode(base64Payload);
       }
+      final payloadText = json['payload_text'] as String?;
+      if (payloadText != null) {
+        return Uint8List.fromList(utf8.encode(payloadText));
+      }
       return Uint8List(0);
     } else {
       throw Exception(
@@ -169,6 +173,8 @@ class CloudRelayClient implements TransportClient {
           final base64Payload = json['payload'] as String?;
           if (base64Payload != null) {
             yield base64Decode(base64Payload);
+          } else if (json['payload_text'] != null) {
+            yield Uint8List.fromList(utf8.encode(json['payload_text'] as String));
           }
         } catch (_) {
           // If raw chunk
@@ -183,6 +189,8 @@ class CloudRelayClient implements TransportClient {
         final base64Payload = json['payload'] as String?;
         if (base64Payload != null) {
           yield base64Decode(base64Payload);
+        } else if (json['payload_text'] != null) {
+          yield Uint8List.fromList(utf8.encode(json['payload_text'] as String));
         }
       } catch (_) {
         yield Uint8List.fromList(utf8.encode(buffer.trim()));

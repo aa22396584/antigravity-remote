@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:cryptography/cryptography.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:http/http.dart' as http;
 import '../models/instance_info.dart';
+import 'ecdsa_p256_service.dart';
 import 'endpoints.dart';
 import 'transport_interface.dart';
 
@@ -17,8 +17,8 @@ class WebRtcMeshClient implements TransportClient {
 
   RTCPeerConnection? _peerConnection;
   RTCDataChannel? _dataChannel;
-  KeyPair? _keyPair;
-  final _algorithm = Ecdsa.p256(Sha256());
+  EcdsaP256Service? _cryptoService;
+  Timer? _signalingTimer;
 
   bool _isChannelAuthenticated = false;
   int? _lastLatencyMs;
@@ -54,12 +54,9 @@ class WebRtcMeshClient implements TransportClient {
   @override
   Future<void> connect() async {
     try {
-      // 1. 生成 ECDSA P-256 密鑰對
-      _keyPair = await _algorithm.newKeyPair();
-      final pubKey = await _keyPair!.extractPublicKey();
-      final Uint8List pubKeyBytes = pubKey is EcPublicKey
-          ? pubKey.toDer()
-          : Uint8List(0);
+      // 1. 生成 ECDSA P-256 密鑰對 (純 Dart 跨平台保證)
+      _cryptoService = EcdsaP256Service.generate();
+      final pubKeyBase64 = _cryptoService!.getSpkiPublicKeyBase64();
 
       // 2. 向雲端宣告 Session (InitiateMeshSession)
       final initUrl = Uri.parse('$baseUrl${ApiEndpoints.initiateMeshSession}');
@@ -72,7 +69,7 @@ class WebRtcMeshClient implements TransportClient {
         body: jsonEncode({
           'target_instance_id': targetInstanceUuid,
           'client_instance_id': clientInstanceId,
-          'web_crypto_pub_key': base64Encode(pubKeyBytes),
+          'web_crypto_pub_key': pubKeyBase64,
         }),
       );
 
@@ -193,16 +190,13 @@ class WebRtcMeshClient implements TransportClient {
 
   /// 簽署 Channel Binding Nonce 並回傳至桌面端
   Future<void> _respondToChannelBindingChallenge(String nonce) async {
-    if (_keyPair == null || _dataChannel == null) return;
+    if (_cryptoService == null || _dataChannel == null) return;
 
-    final signature = await _algorithm.sign(
-      utf8.encode(nonce),
-      keyPair: _keyPair!,
-    );
+    final signatureBase64 = _cryptoService!.signBase64(nonce);
 
     final responsePayload = jsonEncode({
       'type': 'channel_binding_response',
-      'signature': base64Encode(signature.bytes),
+      'signature': signatureBase64,
     });
 
     final frame = frameMessage(Uint8List.fromList(utf8.encode(responsePayload)));
@@ -210,9 +204,11 @@ class WebRtcMeshClient implements TransportClient {
   }
 
   void _startSignalingPoll(String sessionId) {
-    Timer.periodic(const Duration(milliseconds: 1000), (timer) async {
+    _signalingTimer?.cancel();
+    _signalingTimer = Timer.periodic(const Duration(milliseconds: 1000), (timer) async {
       if (_isChannelAuthenticated || _peerConnection == null) {
         timer.cancel();
+        _signalingTimer = null;
         return;
       }
 
@@ -313,6 +309,8 @@ class WebRtcMeshClient implements TransportClient {
   @override
   Future<void> disconnect() async {
     _isChannelAuthenticated = false;
+    _signalingTimer?.cancel();
+    _signalingTimer = null;
     await _dataChannel?.close();
     await _peerConnection?.close();
     _peerConnection = null;

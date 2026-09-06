@@ -1,4 +1,6 @@
 PODS:
+  - cryptography_flutter (0.0.1):
+    - FlutterMacOS
   - flutter_webrtc (1.6.1):
     - FlutterMacOS
     - WebRTC-SDK (= 150.7871.01)
@@ -14,6 +16,7 @@ PODS:
   - WebRTC-SDK (150.7871.01)
 
 DEPENDENCIES:
+  - cryptography_flutter (from `Flutter/ephemeral/.symlinks/plugins/cryptography_flutter/macos`)
   - flutter_webrtc (from `Flutter/ephemeral/.symlinks/plugins/flutter_webrtc/macos`)
   - FlutterMacOS (from `Flutter/ephemeral`)
   - mobile_scanner (from `Flutter/ephemeral/.symlinks/plugins/mobile_scanner/darwin`)
@@ -25,6 +28,8 @@ SPEC REPOS:
     - WebRTC-SDK
 
 EXTERNAL SOURCES:
+  cryptography_flutter:
+    :path: Flutter/ephemeral/.symlinks/plugins/cryptography_flutter/macos
   flutter_webrtc:
     :path: Flutter/ephemeral/.symlinks/plugins/flutter_webrtc/macos
   FlutterMacOS:
@@ -37,6 +42,7 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral/.symlinks/plugins/url_launcher_macos/macos
 
 SPEC CHECKSUMS:
+  cryptography_flutter: be2b3e0e31603521b6a1c2bea232a88a2488a91c
   flutter_webrtc: 194c8107c88f7118b60d7d1c880b5df4ad934f45
   FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
   mobile_scanner: 9157936403f5a0644ca3779a38ff8404c5434a93

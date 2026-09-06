@@ -6,6 +6,7 @@ import '../../../core/network/dual_transport_manager.dart';
 import '../../../core/network/endpoints.dart';
 import '../../../core/network/webrtc_mesh_client.dart';
 import '../../../core/services/mock_antigravity_service.dart';
+import '../../../core/services/remote_control_service.dart';
 import '../../../core/services/storage_service.dart';
 
 class DeviceState {
@@ -62,6 +63,13 @@ class DeviceNotifier extends Notifier<DeviceState> {
   DualTransportManager? _transportManager;
   StreamSubscription? _transportSub;
   StreamSubscription? _latencySub;
+  RemoteControlService? _remoteControlService;
+
+  RemoteControlService get remoteControlService =>
+      _remoteControlService ??= RemoteControlService(
+        isDemoMode: state.isDemoMode,
+        transportManager: _transportManager,
+      );
 
   @override
   DeviceState build() {
@@ -71,6 +79,7 @@ class DeviceNotifier extends Notifier<DeviceState> {
       _transportSub?.cancel();
       _latencySub?.cancel();
       _transportManager?.dispose();
+      _remoteControlService?.dispose();
     });
 
     if (storage != null) {
@@ -107,6 +116,10 @@ class DeviceNotifier extends Notifier<DeviceState> {
   void toggleDemoMode(bool enabled) {
     state = state.copyWith(isDemoMode: enabled);
     _storageService?.setDemoMode(enabled);
+    _remoteControlService?.updateConfiguration(
+      isDemoMode: enabled,
+      transportManager: _transportManager,
+    );
   }
 
   void setEnvironment(CloudEnvironment env) {
@@ -197,6 +210,11 @@ class DeviceNotifier extends Notifier<DeviceState> {
 
       await _transportManager!.connectAll();
 
+      _remoteControlService?.updateConfiguration(
+        isDemoMode: state.isDemoMode,
+        transportManager: _transportManager,
+      );
+
       state = state.copyWith(
         isConnecting: false,
         activeTransport: _transportManager!.currentTransport,
@@ -234,5 +252,9 @@ class DeviceNotifier extends Notifier<DeviceState> {
 }
 
 final storageServiceProvider = Provider<StorageService?>((ref) => null);
+
+final remoteControlServiceProvider = Provider<RemoteControlService>((ref) {
+  return ref.watch(deviceProvider.notifier).remoteControlService;
+});
 
 final deviceProvider = NotifierProvider<DeviceNotifier, DeviceState>(DeviceNotifier.new);

@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/terminal_stream.dart';
-import '../../../core/services/mock_antigravity_service.dart';
 import '../../device/providers/device_provider.dart';
 
 class TerminalState {
@@ -25,15 +24,17 @@ class TerminalState {
 }
 
 class TerminalNotifier extends Notifier<TerminalState> {
-  StreamSubscription? _mockSub;
+  StreamSubscription? _termSub;
 
   @override
   TerminalState build() {
+    final remoteService = ref.watch(remoteControlServiceProvider);
+
     ref.onDispose(() {
-      _mockSub?.cancel();
+      _termSub?.cancel();
     });
 
-    _mockSub = MockAntigravityService.instance.terminalStream.listen((chunk) {
+    _termSub = remoteService.terminalStream.listen((chunk) {
       state = state.copyWith(
         chunks: [...state.chunks, chunk],
         isStreaming: true,
@@ -61,13 +62,8 @@ class TerminalNotifier extends Notifier<TerminalState> {
     );
     state = state.copyWith(chunks: [...state.chunks, chunk]);
 
-    final deviceState = ref.read(deviceProvider);
-    if (!deviceState.isDemoMode) {
-      final manager = ref.read(deviceProvider.notifier).transportManager;
-      if (manager != null) {
-        // 調用 SendTerminalInput
-      }
-    }
+    final remoteService = ref.read(remoteControlServiceProvider);
+    await remoteService.sendTerminalInput(input);
   }
 
   void sendShortcut(String key) {

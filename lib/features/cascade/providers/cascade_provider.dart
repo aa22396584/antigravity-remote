@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/cascade_message.dart';
 import '../../../core/models/trajectory_step.dart';
 import '../../../core/models/user_interaction.dart';
-import '../../../core/services/mock_antigravity_service.dart';
 import '../../device/providers/device_provider.dart';
 
 class CascadeState {
@@ -43,22 +42,20 @@ class CascadeState {
 }
 
 class CascadeNotifier extends Notifier<CascadeState> {
-  StreamSubscription? _mockMsgSub;
-  StreamSubscription? _mockInteractSub;
+  StreamSubscription? _msgSub;
+  StreamSubscription? _interactSub;
 
   @override
   CascadeState build() {
+    final remoteService = ref.watch(remoteControlServiceProvider);
+
     ref.onDispose(() {
-      _mockMsgSub?.cancel();
-      _mockInteractSub?.cancel();
+      _msgSub?.cancel();
+      _interactSub?.cancel();
     });
 
-    // 監聽 Mock 串流
-    _mockMsgSub = MockAntigravityService.instance.messageStream.listen((msg) {
-      _upsertMessage(msg);
-    });
-
-    _mockInteractSub = MockAntigravityService.instance.interactionStream.listen((req) {
+    _msgSub = remoteService.messageStream.listen(_upsertMessage);
+    _interactSub = remoteService.interactionStream.listen((req) {
       state = state.copyWith(pendingInteraction: req);
     });
 
@@ -98,37 +95,30 @@ class CascadeNotifier extends Notifier<CascadeState> {
     final trimmed = prompt.trim();
     if (trimmed.isEmpty) return;
 
-    final deviceState = ref.read(deviceProvider);
+    final userMsg = CascadeMessage(
+      id: 'msg-user-${DateTime.now().millisecondsSinceEpoch}',
+      cascadeId: state.activeCascadeId,
+      role: MessageRole.user,
+      content: trimmed,
+      timestamp: DateTime.now(),
+    );
+    state = state.copyWith(
+      messages: [...state.messages, userMsg],
+      isStreaming: true,
+      clearError: true,
+    );
 
-    if (deviceState.isDemoMode) {
-      MockAntigravityService.instance.simulateUserPrompt(
-        trimmed,
-        state.activeCascadeId,
-      );
-    } else {
-      final userMsg = CascadeMessage(
-        id: 'msg-user-${DateTime.now().millisecondsSinceEpoch}',
+    try {
+      final remoteService = ref.read(remoteControlServiceProvider);
+      await remoteService.sendPrompt(
         cascadeId: state.activeCascadeId,
-        role: MessageRole.user,
-        content: trimmed,
-        timestamp: DateTime.now(),
+        prompt: trimmed,
       );
+    } catch (e) {
       state = state.copyWith(
-        messages: [...state.messages, userMsg],
-        isStreaming: true,
+        isStreaming: false,
+        errorMessage: '發送訊息失敗: $e',
       );
-
-      try {
-        final manager = ref.read(deviceProvider.notifier).transportManager;
-        if (manager != null) {
-          // 調用 SendUserCascadeMessage
-        }
-      } catch (e) {
-        state = state.copyWith(
-          isStreaming: false,
-          errorMessage: '發送訊息失敗: $e',
-        );
-      }
     }
   }
 
@@ -138,15 +128,12 @@ class CascadeNotifier extends Notifier<CascadeState> {
     required bool approved,
     String? feedback,
   }) {
-    final deviceState = ref.read(deviceProvider);
-
-    if (deviceState.isDemoMode) {
-      MockAntigravityService.instance.handleUserApproval(
-        interactionId: interactionId,
-        approved: approved,
-        feedback: feedback,
-      );
-    }
+    final remoteService = ref.read(remoteControlServiceProvider);
+    remoteService.handleApproval(
+      interactionId: interactionId,
+      approved: approved,
+      feedback: feedback,
+    );
 
     final updatedMessages = state.messages.map((m) {
       final updatedSteps = m.trajectorySteps.map((s) {
