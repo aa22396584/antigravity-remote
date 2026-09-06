@@ -75,6 +75,18 @@ void main() {
       expect(prefs.containsKey('ag_access_token'), isFalse);
     });
 
+    test('setAccessToken with empty string automatically clears the token', () async {
+      final prefs = await SharedPreferences.getInstance();
+      final storage = StorageService(prefs);
+
+      await storage.setAccessToken('temporary-token');
+      expect(storage.getAccessToken(), 'temporary-token');
+
+      await storage.setAccessToken('');
+      expect(storage.getAccessToken(), isNull);
+      expect(prefs.containsKey('ag_access_token'), isFalse);
+    });
+
     test('stores and retrieves environment and demo mode', () async {
       final prefs = await SharedPreferences.getInstance();
       final storage = StorageService(prefs);

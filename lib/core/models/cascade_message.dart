@@ -71,32 +71,38 @@ class CascadeMessage {
   };
 
   factory CascadeMessage.fromJson(Map<String, dynamic> json) {
-    final rawRole = json['role']?.toString();
+    final rawRole = (json['role'] ?? json['message_role'])?.toString();
+    final normRole = rawRole?.toLowerCase().replaceAll('_', '');
     final durationMs = json['thinkingDurationMs'] ?? json['thinking_duration_ms'];
+    final rawIsThinking = json['isThinking'] ?? json['is_thinking'];
+    final rawIsStreaming = json['isStreaming'] ?? json['is_streaming'];
 
     return CascadeMessage(
-      id: json['id'] as String? ?? '',
+      id: (json['id'] ?? json['message_id'] ?? json['msg_id']) as String? ?? '',
       cascadeId: (json['cascadeId'] ?? json['cascade_id']) as String? ?? '',
       role: MessageRole.values.firstWhere(
-        (e) =>
-            e.name == rawRole ||
-            rawRole?.toUpperCase().contains(e.name.toUpperCase()) == true,
+        (e) {
+          final target = e.name.toLowerCase();
+          return e.name == rawRole ||
+              target == normRole ||
+              (normRole != null && normRole.endsWith(target));
+        },
         orElse: () => MessageRole.assistant,
       ),
-      content: (json['content'] ?? json['text']) as String? ?? '',
-      thinking: json['thinking'] as String?,
-      isThinking: (json['isThinking'] ?? json['is_thinking']) as bool? ?? false,
+      content: (json['content'] ?? json['text'] ?? json['message'])?.toString() ?? '',
+      thinking: (json['thinking'] ?? json['thinking_content'])?.toString(),
+      isThinking: rawIsThinking == true || rawIsThinking == 1 || rawIsThinking == 'true',
       thinkingDuration: durationMs != null
           ? Duration(milliseconds: (durationMs as num).toInt())
           : null,
       trajectorySteps: ((json['trajectorySteps'] ??
                   json['trajectory_steps'] ??
                   json['steps']) as List<dynamic>?)
-              ?.map((e) => TrajectoryStep.fromJson(e as Map<String, dynamic>))
+              ?.whereType<Map>()
+              .map((e) => TrajectoryStep.fromJson(Map<String, dynamic>.from(e)))
               .toList() ??
           const [],
-      isStreaming:
-          (json['isStreaming'] ?? json['is_streaming']) as bool? ?? false,
+      isStreaming: rawIsStreaming == true || rawIsStreaming == 1 || rawIsStreaming == 'true',
       timestamp: (json['timestamp'] ?? json['created_at']) != null
           ? DateTime.tryParse(
                   (json['timestamp'] ?? json['created_at']) as String) ??

@@ -344,7 +344,17 @@ class RemoteControlService {
 
       _liveTerminalSub = stream.listen(
         (data) {
-          final text = utf8.decode(data, allowMalformed: true);
+          Uint8List payload = data;
+          if (data.length >= 5 && data[0] <= 0x0F) {
+            final len = (data[1] << 24) |
+                (data[2] << 16) |
+                (data[3] << 8) |
+                data[4];
+            if (len >= 0 && data.length >= 5 + len) {
+              payload = data.sublist(5, 5 + len);
+            }
+          }
+          final text = utf8.decode(payload, allowMalformed: true);
           _terminalController.add(TerminalChunk(
             text: text,
             timestamp: DateTime.now(),

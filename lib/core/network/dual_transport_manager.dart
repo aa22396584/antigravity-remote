@@ -15,6 +15,7 @@ class DualTransportManager {
   int? _currentLatencyMs;
   StreamSubscription? _relayLatencySub;
   StreamSubscription? _meshLatencySub;
+  StreamSubscription? _meshConnSub;
 
   DualTransportManager({
     required this.relayClient,
@@ -39,8 +40,31 @@ class DualTransportManager {
     });
 
     if (meshClient != null) {
+      _meshConnSub = meshClient!.connectionStatusStream.listen((isConnected) {
+        if (isConnected) {
+          _setTransport(TransportType.p2p);
+          if (meshClient!.currentLatencyMs != null) {
+            _currentLatencyMs = meshClient!.currentLatencyMs;
+            if (!_latencyController.isClosed) {
+              _latencyController.add(_currentLatencyMs!);
+            }
+          }
+        } else if (_currentTransport == TransportType.p2p) {
+          _setTransport(TransportType.relay);
+          if (relayClient.currentLatencyMs != null) {
+            _currentLatencyMs = relayClient.currentLatencyMs;
+            if (!_latencyController.isClosed) {
+              _latencyController.add(_currentLatencyMs!);
+            }
+          }
+        }
+      });
+
       _meshLatencySub = meshClient!.latencyStream.listen((lat) {
-        if (_currentTransport == TransportType.p2p) {
+        if (meshClient!.isConnected) {
+          if (_currentTransport != TransportType.p2p) {
+            _setTransport(TransportType.p2p);
+          }
           _currentLatencyMs = lat;
           if (!_latencyController.isClosed) {
             _latencyController.add(lat);
@@ -118,6 +142,7 @@ class DualTransportManager {
   Future<void> disconnect() async {
     _relayLatencySub?.cancel();
     _meshLatencySub?.cancel();
+    _meshConnSub?.cancel();
     await relayClient.disconnect();
     await meshClient?.disconnect();
     _setTransport(TransportType.offline);

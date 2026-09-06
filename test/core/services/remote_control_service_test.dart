@@ -1,9 +1,12 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:antigravity_remote/core/models/cascade_message.dart';
 import 'package:antigravity_remote/core/models/terminal_stream.dart';
 import 'package:antigravity_remote/core/models/trajectory_step.dart';
 import 'package:antigravity_remote/core/models/user_interaction.dart';
 import 'package:antigravity_remote/core/network/endpoints.dart';
+import 'package:antigravity_remote/core/network/webrtc_mesh_client.dart';
 import 'package:antigravity_remote/core/services/remote_control_service.dart';
 import '../../test_harness/mock_transport_harness.dart';
 
@@ -343,6 +346,109 @@ void main() {
       expect(lastMsg.isStreaming, isFalse);
       expect(lastMsg.content, contains('⚠️ 連線中斷'));
       expect(lastMsg.content, contains('SCTP connection reset by peer'));
+    });
+
+    test('Live Mode handleApproval sends DECISION_REJECT when approved is false', () async {
+      final harness = MockTransportHarness();
+      addTearDown(harness.dispose);
+
+      final service = RemoteControlService(
+        isDemoMode: false,
+        transportManager: harness,
+      );
+      addTearDown(service.dispose);
+
+      await service.handleApproval(
+        interactionId: 'interact-reject-1',
+        approved: false,
+        feedback: 'User denied permission to delete files',
+      );
+
+      expect(harness.unaryCalls.length, 1);
+      final call = harness.unaryCalls.first;
+      expect(call.rpcPath, ApiEndpoints.handleCascadeUserInteraction);
+      expect(call.payloadJson['interactionId'], 'interact-reject-1');
+      expect(call.payloadJson['decision'], 'DECISION_REJECT');
+      expect(call.payloadJson['userFeedback'], 'User denied permission to delete files');
+    });
+
+    test('Live Mode updates TrajectoryStep in-place when duplicate step_id arrives', () async {
+      final harness = MockTransportHarness();
+      addTearDown(harness.dispose);
+
+      final service = RemoteControlService(
+        isDemoMode: false,
+        transportManager: harness,
+      );
+      addTearDown(service.dispose);
+
+      final messages = <CascadeMessage>[];
+      final sub = service.messageStream.listen(messages.add);
+      addTearDown(sub.cancel);
+
+      await service.sendPrompt(cascadeId: 'c-inplace', prompt: '執行步驟');
+
+      // Step running
+      harness.emitFramedCascadeJson({
+        'step': {
+          'step_id': 'step-dup-1',
+          'type': 'tool_call',
+          'tool_name': 'compile',
+          'summary': '正在編譯...',
+          'status': 'running',
+        },
+      });
+      await Future.delayed(Duration.zero);
+      expect(messages.last.trajectorySteps.length, 1);
+      expect(messages.last.trajectorySteps.first.status, StepStatus.running);
+
+      // Step finished
+      harness.emitFramedCascadeJson({
+        'step': {
+          'step_id': 'step-dup-1',
+          'type': 'tool_call',
+          'tool_name': 'compile',
+          'summary': '編譯成功',
+          'status': 'completed',
+        },
+      });
+      await Future.delayed(Duration.zero);
+
+      // Must be updated in-place without duplicating
+      expect(messages.last.trajectorySteps.length, 1);
+      expect(messages.last.trajectorySteps.first.status, StepStatus.completed);
+      expect(messages.last.trajectorySteps.first.summary, '編譯成功');
+    });
+
+    test('Live Terminal stream strips 5-byte framing header from incoming chunks', () async {
+      final harness = MockTransportHarness();
+      addTearDown(harness.dispose);
+
+      final service = RemoteControlService(
+        isDemoMode: false,
+        transportManager: harness,
+      );
+      addTearDown(service.dispose);
+
+      final chunks = <TerminalChunk>[];
+      final sub = service.terminalStream.listen(chunks.add);
+      addTearDown(sub.cancel);
+
+      await service.sendPrompt(cascadeId: 'c-term-frame', prompt: '觸發終端串流');
+
+      // Send a framed terminal chunk with 0x02 flag and 5-byte prefix
+      final rawText = 'git log -n 1\n';
+      final framedText = WebRtcMeshClient.frameMessage(
+        Uint8List.fromList(utf8.encode(rawText)),
+        flag: 0x02,
+      );
+      harness.terminalStreamController.add(framedText);
+      await Future.delayed(Duration.zero);
+
+      expect(chunks.isNotEmpty, isTrue);
+      // Terminal chunk text should be cleanly stripped of binary 5-byte header
+      expect(chunks.last.text, 'git log -n 1\n');
+      expect(chunks.last.text.contains('\x02'), isFalse);
     });
   });
 }

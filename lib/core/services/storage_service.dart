@@ -80,6 +80,20 @@ class StorageService {
     return StorageService(prefs);
   }
 
+  Future<String> _getOrCreateSaltAsync() async {
+    var salt = _prefs.getString(_keyTokenSalt);
+    if (salt == null || salt.isEmpty) {
+      final rand = Random.secure();
+      final bytes = Uint8List(16);
+      for (int i = 0; i < 16; i++) {
+        bytes[i] = rand.nextInt(256);
+      }
+      salt = base64Url.encode(bytes);
+      await _prefs.setString(_keyTokenSalt, salt);
+    }
+    return salt;
+  }
+
   String _getOrCreateSalt() {
     var salt = _prefs.getString(_keyTokenSalt);
     if (salt == null || salt.isEmpty) {
@@ -104,7 +118,13 @@ class StorageService {
   }
 
   Future<void> setAccessToken(String token) async {
-    final encrypted = _TokenVaultCrypto.encrypt(token, _vaultKey);
+    if (token.isEmpty) {
+      await clearAccessToken();
+      return;
+    }
+    final salt = await _getOrCreateSaltAsync();
+    final key = _TokenVaultCrypto.deriveKey(salt);
+    final encrypted = _TokenVaultCrypto.encrypt(token, key);
     await _prefs.setString(_keyAccessToken, encrypted);
   }
 

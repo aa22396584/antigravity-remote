@@ -34,18 +34,23 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
     super.dispose();
   }
 
-  void _scrollToBottom({bool smooth = true}) {
+  void _scrollToBottom({bool smooth = true, bool force = false}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _scrollController.hasClients) {
-        final maxScroll = _scrollController.position.maxScrollExtent;
-        if (smooth) {
-          _scrollController.animateTo(
-            maxScroll,
-            duration: const Duration(milliseconds: 120),
-            curve: Curves.easeOut,
-          );
-        } else {
-          _scrollController.jumpTo(maxScroll);
+        final pos = _scrollController.position;
+        // 只有當使用者停留在接近底部（小於 160px）或強制滾動（如新訊息）時才自動跟隨
+        final isNearBottom = (pos.maxScrollExtent - pos.pixels) <= 160;
+        if (force || isNearBottom) {
+          final maxScroll = pos.maxScrollExtent;
+          if (smooth) {
+            _scrollController.animateTo(
+              maxScroll,
+              duration: const Duration(milliseconds: 120),
+              curve: Curves.easeOut,
+            );
+          } else {
+            _scrollController.jumpTo(maxScroll);
+          }
         }
       }
     });
@@ -64,11 +69,14 @@ class _CascadeChatViewState extends ConsumerState<CascadeChatView> {
           prevLast?.thinking != nextLast?.thinking ||
           prevLast?.trajectorySteps.length != nextLast?.trajectorySteps.length;
 
-      if (prev?.messages.length != next.messages.length ||
-          prev?.pendingInteraction != next.pendingInteraction ||
-          prev?.isStreaming != next.isStreaming ||
-          contentChanged) {
-        _scrollToBottom();
+      final newMsgAdded = prev?.messages.length != next.messages.length;
+      final newInteraction = prev?.pendingInteraction != next.pendingInteraction &&
+          next.pendingInteraction != null;
+
+      if (newMsgAdded || newInteraction) {
+        _scrollToBottom(force: true);
+      } else if (contentChanged || prev?.isStreaming != next.isStreaming) {
+        _scrollToBottom(force: false);
       }
     });
 

@@ -256,11 +256,21 @@ class DeviceNotifier extends Notifier<DeviceState> {
 
   Future<void> removeDevice(String instanceId) async {
     final updated = state.devices.where((d) => d.instanceId != instanceId).toList();
+    final wasActive = state.activeDevice?.instanceId == instanceId;
     InstanceInfo? nextActive;
-    if (state.activeDevice?.instanceId == instanceId) {
+    if (wasActive) {
       nextActive = updated.isNotEmpty ? updated.first : null;
     } else {
       nextActive = state.activeDevice;
+    }
+
+    if (wasActive) {
+      _transportSub?.cancel();
+      _transportSub = null;
+      _latencySub?.cancel();
+      _latencySub = null;
+      await _transportManager?.dispose();
+      _transportManager = null;
     }
 
     state = state.copyWith(
@@ -269,6 +279,10 @@ class DeviceNotifier extends Notifier<DeviceState> {
       clearActiveDevice: nextActive == null,
     );
     await _storageService?.removeInstance(instanceId);
+
+    if (wasActive && nextActive != null) {
+      await connectToDevice(nextActive);
+    }
   }
 }
 

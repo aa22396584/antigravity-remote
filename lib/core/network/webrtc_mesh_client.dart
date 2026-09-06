@@ -18,11 +18,17 @@ class FramePacket {
 
 /// WebRTC SCTP 封包分片 (Fragmentation) 與沾黏封包 (Sticky packets) 累積解析緩衝區
 class FrameAccumulator {
-  final BytesBuilder _buffer = BytesBuilder(copy: false);
+  static const int maxFrameLength = 32 * 1024 * 1024; // 32MB 單一訊框上限
+  static const int maxBufferSize = 64 * 1024 * 1024; // 64MB 緩衝區總上限
+
+  final BytesBuilder _buffer = BytesBuilder();
 
   /// 加入收到的網路資料分片
   void push(Uint8List chunk) {
     if (chunk.isNotEmpty) {
+      if (_buffer.length + chunk.length > maxBufferSize) {
+        _buffer.clear();
+      }
       _buffer.add(chunk);
     }
   }
@@ -43,16 +49,18 @@ class FrameAccumulator {
           (bytes[offset + 3] << 8) |
           bytes[offset + 4];
 
-      // 防禦性檢查：防長度溢位或負數異常
-      if (length < 0) {
+      // 防禦性檢查：防長度溢位、負數異常或超過上限
+      if (length < 0 || length > maxFrameLength) {
         offset += 1;
         continue;
       }
 
       final frameEnd = offset + 5 + length;
       if (frameEnd <= totalLen) {
-        // 取得完整訊框 Payload
-        final payload = Uint8List.sublistView(bytes, offset + 5, frameEnd);
+        // 取得完整訊框 Payload (獨立拷貝確保線程與異步安全)
+        final payload = Uint8List.fromList(
+          Uint8List.sublistView(bytes, offset + 5, frameEnd),
+        );
         frames.add(FramePacket(flag: flag, payload: payload));
         offset = frameEnd;
       } else {
@@ -102,6 +110,7 @@ class WebRtcMeshClient implements TransportClient {
   bool _isChannelAuthenticated = false;
   int? _lastLatencyMs;
   final _latencyController = StreamController<int>.broadcast();
+  final _connectionStatusController = StreamController<bool>.broadcast();
 
   // 獨立隔離串流控制器：徹底杜絕 Cascade Reactive Updates 與 Terminal Output 污染
   final _cascadeStreamController = StreamController<Uint8List>.broadcast();
@@ -133,6 +142,8 @@ class WebRtcMeshClient implements TransportClient {
 
   @override
   Stream<int> get latencyStream => _latencyController.stream;
+
+  Stream<bool> get connectionStatusStream => _connectionStatusController.stream;
 
   @override
   int? get currentLatencyMs => _lastLatencyMs;
@@ -315,6 +326,9 @@ class WebRtcMeshClient implements TransportClient {
           );
           _isChannelAuthenticated = true;
           _lastLatencyMs = 12; // Initial P2P estimate
+          if (!_connectionStatusController.isClosed) {
+            _connectionStatusController.add(true);
+          }
           if (!_latencyController.isClosed) {
             _latencyController.add(_lastLatencyMs!);
           }
@@ -325,15 +339,7 @@ class WebRtcMeshClient implements TransportClient {
       }
     }
 
-    // 2. 一元 RPC 請求回傳匹配
-    if (flag == 0x00 && _pendingRequests.isNotEmpty) {
-      final firstKey = _pendingRequests.keys.first;
-      final completer = _pendingRequests.remove(firstKey);
-      completer?.complete(payload);
-      return;
-    }
-
-    // 3. 多工隔離分流 (Multiplexing Isolation)
+    // 2. 多工隔離分流 (Multiplexing Isolation)
     // 優先根據獨立 DataChannel 頻道標籤或 5-byte Flag (0x01: Cascade, 0x02: Terminal)
     if (fromChannel == 'terminal-channel' || flag == 0x02) {
       if (!_terminalStreamController.isClosed) {
@@ -349,19 +355,25 @@ class WebRtcMeshClient implements TransportClient {
       return;
     }
 
-    // 針對共享單一 DataChannel 且 Flag 為 0x00 的相容回退分流
+    // 3. 針對共享單一 DataChannel 且 Flag 為 0x00 的相容回退分流
+    // 檢查是否為 Cascade Reactive Update 串流封包 (包含思考、步驟、互動審批與文字串流)
     bool isCascadePayload = false;
     try {
       final text = utf8.decode(payload);
       final json = jsonDecode(text);
       if (json is Map) {
         if (json.containsKey('thinking') ||
+            json.containsKey('is_thinking') ||
             json.containsKey('trajectory_step') ||
             json.containsKey('step') ||
             json.containsKey('interaction') ||
             json.containsKey('cascadeId') ||
+            json.containsKey('cascade_id') ||
             json.containsKey('is_final') ||
-            json.containsKey('is_thinking')) {
+            json.containsKey('done') ||
+            json.containsKey('content') ||
+            json.containsKey('text') ||
+            json.containsKey('step_id')) {
           isCascadePayload = true;
         }
       }
@@ -371,13 +383,26 @@ class WebRtcMeshClient implements TransportClient {
       if (!_cascadeStreamController.isClosed) {
         _cascadeStreamController.add(payload);
       }
-    } else {
-      if (_terminalStreamController.hasListener && !_terminalStreamController.isClosed) {
-        _terminalStreamController.add(payload);
-      }
-      if (!_defaultStreamController.isClosed) {
-        _defaultStreamController.add(payload);
-      }
+      return;
+    }
+
+    // 4. 一元 RPC 請求回傳匹配 (僅限非串流、且來自 proxy/default 頻道)
+    if (flag == 0x00 &&
+        fromChannel != 'cascade-channel' &&
+        fromChannel != 'terminal-channel' &&
+        _pendingRequests.isNotEmpty) {
+      final firstKey = _pendingRequests.keys.first;
+      final completer = _pendingRequests.remove(firstKey);
+      completer?.complete(payload);
+      return;
+    }
+
+    // 5. 終端或預設串流回退分發 (純文字/PTY 輸出)
+    if (_terminalStreamController.hasListener && !_terminalStreamController.isClosed) {
+      _terminalStreamController.add(payload);
+    }
+    if (!_defaultStreamController.isClosed) {
+      _defaultStreamController.add(payload);
     }
   }
 
@@ -446,14 +471,25 @@ class WebRtcMeshClient implements TransportClient {
                   await _peerConnection?.setRemoteDescription(description);
                 }
               } else if (payloadJson['candidate'] != null) {
-                final candidateMap =
-                    payloadJson['candidate'] as Map<String, dynamic>;
-                final candidate = RTCIceCandidate(
-                  candidateMap['candidate'] as String?,
-                  candidateMap['sdpMid'] as String?,
-                  candidateMap['sdpMLineIndex'] as int?,
-                );
-                await _peerConnection?.addCandidate(candidate);
+                final rawCand = payloadJson['candidate'];
+                String? candStr;
+                String? sdpMid;
+                int? sdpMLineIndex;
+
+                if (rawCand is Map) {
+                  candStr = rawCand['candidate']?.toString();
+                  sdpMid = rawCand['sdpMid']?.toString();
+                  sdpMLineIndex = (rawCand['sdpMLineIndex'] as num?)?.toInt();
+                } else if (rawCand is String) {
+                  candStr = rawCand;
+                  sdpMid = payloadJson['sdpMid']?.toString();
+                  sdpMLineIndex = (payloadJson['sdpMLineIndex'] as num?)?.toInt();
+                }
+
+                if (candStr != null && candStr.isNotEmpty) {
+                  final candidate = RTCIceCandidate(candStr, sdpMid, sdpMLineIndex);
+                  await _peerConnection?.addCandidate(candidate);
+                }
               }
             }
           }
@@ -479,7 +515,9 @@ class WebRtcMeshClient implements TransportClient {
 
   @override
   Future<Uint8List> callUnary(String rpcPath, Uint8List payload) async {
-    if (!isConnected || _dataChannel == null) {
+    if (!isConnected ||
+        _dataChannel == null ||
+        _dataChannel!.state != RTCDataChannelState.RTCDataChannelOpen) {
       throw Exception('WebRTC DataChannel is not connected or authenticated');
     }
 
@@ -535,6 +573,9 @@ class WebRtcMeshClient implements TransportClient {
   @override
   Future<void> disconnect() async {
     _isChannelAuthenticated = false;
+    if (!_connectionStatusController.isClosed) {
+      _connectionStatusController.add(false);
+    }
     _signalingTimer?.cancel();
     _signalingTimer = null;
     await _dataChannel?.close();
@@ -552,6 +593,7 @@ class WebRtcMeshClient implements TransportClient {
 
   void dispose() {
     disconnect();
+    if (!_connectionStatusController.isClosed) _connectionStatusController.close();
     if (!_latencyController.isClosed) _latencyController.close();
     if (!_cascadeStreamController.isClosed) _cascadeStreamController.close();
     if (!_terminalStreamController.isClosed) _terminalStreamController.close();

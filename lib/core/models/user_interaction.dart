@@ -88,6 +88,11 @@ class UserInteractionRequest {
   factory UserInteractionRequest.fromJson(Map<String, dynamic> json) {
     final rawType = (json['type'] ?? json['interaction_type'])?.toString();
     final rawStatus = (json['status'] ?? json['interaction_status'])?.toString();
+    final normType = rawType?.toLowerCase().replaceAll('_', '');
+    final normStatus = rawStatus?.toLowerCase().replaceAll('_', '');
+
+    final isMulti = json['isMultiSelect'] ?? json['is_multi_select'];
+    final isDestruct = json['isDestructive'] ?? json['is_destructive'];
 
     return UserInteractionRequest(
       interactionId: (json['interactionId'] ??
@@ -95,9 +100,12 @@ class UserInteractionRequest {
               json['id']) as String? ??
           '',
       type: UserInteractionType.values.firstWhere(
-        (e) =>
-            e.name == rawType ||
-            e.name.toLowerCase() == rawType?.toLowerCase().replaceAll('_', ''),
+        (e) {
+          final target = e.name.toLowerCase();
+          return e.name == rawType ||
+              target == normType ||
+              (normType != null && normType.endsWith(target));
+        },
         orElse: () => UserInteractionType.askPermission,
       ),
       title: (json['title'] ?? json['request_title']) as String? ?? '請求授權',
@@ -114,12 +122,15 @@ class UserInteractionRequest {
               ?.map((e) => e.toString())
               .toList() ??
           const [],
-      isMultiSelect: (json['isMultiSelect'] ?? json['is_multi_select']) as bool? ?? false,
-      isDestructive: (json['isDestructive'] ?? json['is_destructive']) as bool? ?? false,
+      isMultiSelect: isMulti == true || isMulti == 1 || isMulti == 'true',
+      isDestructive: isDestruct == true || isDestruct == 1 || isDestruct == 'true',
       status: InteractionStatus.values.firstWhere(
-        (e) =>
-            e.name == rawStatus ||
-            e.name.toLowerCase() == rawStatus?.toLowerCase().replaceAll('_', ''),
+        (e) {
+          final target = e.name.toLowerCase();
+          return e.name == rawStatus ||
+              target == normStatus ||
+              (normStatus != null && normStatus.endsWith(target));
+        },
         orElse: () => InteractionStatus.pending,
       ),
       userFeedback: (json['userFeedback'] ??

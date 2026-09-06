@@ -93,33 +93,50 @@ class TrajectoryStep {
   factory TrajectoryStep.fromJson(Map<String, dynamic> json) {
     final rawType = (json['type'] ?? json['step_type'])?.toString();
     final rawStatus = (json['status'] ?? json['step_status'])?.toString();
+    final normType = rawType?.toLowerCase().replaceAll('_', '');
+    final normStatus = rawStatus?.toLowerCase().replaceAll('_', '');
     final durationMs = json['executionDurationMs'] ?? json['execution_duration_ms'];
+
+    final rawArgs = json['arguments'] ?? json['args'];
+    final Map<String, dynamic> parsedArgs;
+    if (rawArgs is Map) {
+      parsedArgs = Map<String, dynamic>.from(rawArgs);
+    } else {
+      parsedArgs = const {};
+    }
 
     return TrajectoryStep(
       stepId: (json['stepId'] ?? json['step_id']) as String? ?? '',
       type: StepType.values.firstWhere(
-        (e) =>
-            e.name == rawType ||
-            e.name.toLowerCase() == rawType?.toLowerCase().replaceAll('_', ''),
+        (e) {
+          final target = e.name.toLowerCase();
+          return e.name == rawType ||
+              target == normType ||
+              (normType != null && normType.endsWith(target));
+        },
         orElse: () => StepType.toolCall,
       ),
       toolName: (json['toolName'] ?? json['tool_name']) as String? ?? '',
       summary: json['summary'] as String? ?? '執行工具',
       description: json['description'] as String? ?? '',
-      arguments: (json['arguments'] ?? json['args'] as Map<String, dynamic>?) ??
-          const {},
+      arguments: parsedArgs,
       output: json['output'] as String?,
       codeDiff: (json['codeDiff'] ?? json['code_diff']) as String?,
       status: StepStatus.values.firstWhere(
-        (e) =>
-            e.name == rawStatus ||
-            e.name.toLowerCase() == rawStatus?.toLowerCase().replaceAll('_', ''),
+        (e) {
+          final target = e.name.toLowerCase();
+          return e.name == rawStatus ||
+              target == normStatus ||
+              (normStatus != null && normStatus.endsWith(target));
+        },
         orElse: () => StepStatus.completed,
       ),
       interaction: (json['interaction'] ?? json['user_interaction']) != null
           ? UserInteractionRequest.fromJson(
-              (json['interaction'] ?? json['user_interaction'])
-                  as Map<String, dynamic>)
+              Map<String, dynamic>.from(
+                (json['interaction'] ?? json['user_interaction']) as Map,
+              ),
+            )
           : null,
       timestamp: (json['timestamp'] ?? json['created_at']) != null
           ? DateTime.tryParse(

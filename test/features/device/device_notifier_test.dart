@@ -44,6 +44,8 @@ void main() {
 
       final state = container.read(deviceProvider);
       expect(state.devices.any((d) => d.instanceId == initialActive.instanceId), isFalse);
+      expect(state.activeDevice, isNotNull);
+      expect(state.activeDevice!.instanceId, isNot(initialActive.instanceId));
     });
 
     test('toggleDemoMode updates state and propagates to remoteControlService', () {

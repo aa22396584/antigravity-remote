@@ -34,14 +34,18 @@ class _TerminalConsoleCardState extends State<TerminalConsoleCard> {
     }
   }
 
-  void _scrollToBottom() {
+  void _scrollToBottom({bool force = false}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 150),
-          curve: Curves.easeOut,
-        );
+        final pos = _scrollController.position;
+        final isNearBottom = (pos.maxScrollExtent - pos.pixels) <= 120;
+        if (force || isNearBottom) {
+          _scrollController.animateTo(
+            pos.maxScrollExtent,
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeOut,
+          );
+        }
       }
     });
   }
@@ -58,6 +62,7 @@ class _TerminalConsoleCardState extends State<TerminalConsoleCard> {
     if (text.isEmpty) return;
     widget.onSendInput(text);
     _inputController.clear();
+    _scrollToBottom(force: true);
   }
 
   @override
