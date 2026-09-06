@@ -99,5 +99,5 @@
 - ✅ **全套自動化測試**：`158 passed` (0 failed, 0 skipped)。
 - ✅ **靜態代碼分析**：`flutter analyze` -> `No issues found!`。
 - ✅ **代碼格式規範**：`dart format --set-exit-if-changed .` -> `0 changed`。
-- ✅ **Android 生產打包**：`flutter build apk --release` -> 112.8MB 生產級 APK。
+- ✅ **Android 生產打包與簽名**：`flutter build apk --release` -> 112.8MB 生產級 APK，通過 APK Signature Scheme v2 簽名驗證（`SHA-256: 6bcf0eb7b44fabc7cc420b6a6ae61c71f5da32e332fbd7f776c07963c71c70fd`）。
 - ✅ **平台能力支援**：參見 [平台能力矩陣](docs/platform_matrix.md) 與 [協議相容性規格](docs/protocol/compatibility.md)。

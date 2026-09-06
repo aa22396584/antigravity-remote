@@ -37,13 +37,19 @@
 
 最新穩定正式版本：**v1.1.0** (Build `1.1.0+2`，發布日期：2026-09-06)
 
-| 產物類型 | 下載 / 訪問連結 | 規格說明 |
+| 產物類型 | 下載 / 訪問連結 | 規格與校驗說明 |
 | :--- | :--- | :--- |
-| 🤖 **Android 生產級 APK** | [**antigravity-remote-v1.1.0.apk (112.8MB)**](https://github.com/ImL1s/antigravity-remote/releases/download/v1.1.0/app-release.apk) | 支援 Android 7.0+ (API 24+)，含相機掃碼與純 Dart ECDSA P-256 |
+| 🤖 **Android 生產級 APK** | [**antigravity-remote-v1.1.0.apk (112.8MB)**](https://github.com/ImL1s/antigravity-remote/releases/download/v1.1.0/antigravity-remote-v1.1.0.apk) / [app-release.apk](https://github.com/ImL1s/antigravity-remote/releases/download/v1.1.0/app-release.apk) | 支援 Android 7.0+ (API 24+)，通過 APK Signature Scheme v2 簽名驗證<br/>`SHA-256: 6bcf0eb7b44fabc7cc420b6a6ae61c71f5da32e332fbd7f776c07963c71c70fd` |
 | 🚀 **GitHub Release 官方頁面** | [**GitHub Releases / v1.1.0**](https://github.com/ImL1s/antigravity-remote/releases/tag/v1.1.0) | 官方正式發布頁面、二進位產物與驗證簽名 |
 | 📝 **結構化更新日誌** | [**CHANGELOG.md**](CHANGELOG.md) | 完整記錄本次 34 項 Issues 稽核成果與重大修復細節 |
 | 🗺️ **平台相容與能力矩陣** | [**docs/platform_matrix.md**](docs/platform_matrix.md) | 各作業系統功能支援級別（Android / iOS / macOS / Desktop） |
 | 📜 **協議相容性規格書** | [**docs/protocol/compatibility.md**](docs/protocol/compatibility.md) | 雙軌傳輸、5-byte 分幀規範與 RPC 端點定義 |
+
+> 🔒 **APK 雜湊校驗指南 (SHA-256 Checksum)**：
+> ```bash
+> shasum -a 256 antigravity-remote-v1.1.0.apk
+> # 預期輸出：6bcf0eb7b44fabc7cc420b6a6ae61c71f5da32e332fbd7f776c07963c71c70fd
+> ```
 
 ---
 
@@ -344,13 +350,19 @@ Reverse-engineered from the Antigravity local binary daemon (`language_server`),
 
 Latest Stable Release: **v1.1.0** (Build `1.1.0+2`, Released: 2026-09-06)
 
-| Artifact | Download Link | Description |
+| Artifact | Download Link | Description & Verification |
 | :--- | :--- | :--- |
-| 🤖 **Android Production APK** | [**antigravity-remote-v1.1.0.apk (112.8MB)**](https://github.com/ImL1s/antigravity-remote/releases/download/v1.1.0/app-release.apk) | Compatible with Android 7.0+ (API 24+), mobile scanner & pure Dart P-256 |
+| 🤖 **Android Production APK** | [**antigravity-remote-v1.1.0.apk (112.8MB)**](https://github.com/ImL1s/antigravity-remote/releases/download/v1.1.0/antigravity-remote-v1.1.0.apk) / [app-release.apk](https://github.com/ImL1s/antigravity-remote/releases/download/v1.1.0/app-release.apk) | Compatible with Android 7.0+ (API 24+), verified with APK Signature Scheme v2<br/>`SHA-256: 6bcf0eb7b44fabc7cc420b6a6ae61c71f5da32e332fbd7f776c07963c71c70fd` |
 | 🚀 **GitHub Release Page** | [**GitHub Releases / v1.1.0**](https://github.com/ImL1s/antigravity-remote/releases/tag/v1.1.0) | Official release portal, binary distribution & sha256 checksums |
 | 📝 **Changelog & Notes** | [**CHANGELOG.md**](CHANGELOG.md) | Granular changelog documenting all 34 audited issues and fixes |
 | 🗺️ **Platform Matrix** | [**docs/platform_matrix.md**](docs/platform_matrix.md) | Platform verification tiers across Android, iOS, macOS, Desktop |
 | 📜 **Protocol Compatibility** | [**docs/protocol/compatibility.md**](docs/protocol/compatibility.md) | Dual-Transport framing, RPC endpoints, and fail-closed state machine |
+
+> 🔒 **APK SHA-256 Checksum Verification**:
+> ```bash
+> shasum -a 256 antigravity-remote-v1.1.0.apk
+> # Expected: 6bcf0eb7b44fabc7cc420b6a6ae61c71f5da32e332fbd7f776c07963c71c70fd
+> ```
 
 ---
 

@@ -43,13 +43,14 @@ void main() {
         'User connected with Bearer super_secret_token',
       );
       final report = DiagnosticService.instance.exportReport(
-        appVersion: '1.0.0+1',
+        appVersion: '1.1.0+2',
         isDemoMode: false,
         environment: 'production',
         deviceCount: 2,
       );
 
       expect(report, contains('Antigravity Remote Diagnostic Report'));
+      expect(report, contains('App Version: 1.1.0+2'));
       expect(report, contains('Mode: Live Mode'));
       expect(report, isNot(contains('super_secret_token')));
       expect(report, contains('[REDACTED_TOKEN]'));
