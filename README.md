@@ -696,6 +696,12 @@ dart format --output=none --set-exit-if-changed .
 
 ---
 
+## Support / 支持
+
+If this project saved you some time, you can [buy me a coffee](https://buymeacoffee.com/iml1s).
+
+如果這個專案幫你省了點時間，可以請我喝杯咖啡。
+
 ## 📄 開源授權 (License)
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
