@@ -4,6 +4,11 @@
 
 # Antigravity Remote (遠端控制中樞)
 
+> **Development home:** https://github.com/ImL1s/antigravity-remote  
+> Please open issues and pull requests there.  
+> **Mirrors:** [Codeberg](https://codeberg.org/ImL1s/antigravity-remote) · [GitLab](https://gitlab.com/aa22396584/antigravity-remote)
+
+
 **Next-Gen Cross-Platform Native Remote Deck for Antigravity (Google Jetski) Editor**  
 *次世代 Antigravity (Google Jetski) 編輯器跨平台原生遠端控制工作台*
 
