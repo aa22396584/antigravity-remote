@@ -12,6 +12,8 @@ https://github.com/aa22396584/antigravity-remote
 [Codeberg](https://codeberg.org/ImL1s/antigravity-remote)
 
 
+> **Why this GitHub home?** Public development moved here from [`ImL1s/antigravity-remote`](https://github.com/ImL1s/antigravity-remote) because that GitHub account is currently restricted (anonymous visitors get 404 on the profile and many assets). This is the same project. Please open Issues and Pull Requests here.
+
 **Next-Gen Cross-Platform Native Remote Deck for Antigravity (Google Jetski) Editor**  
 *次世代 Antigravity (Google Jetski) 編輯器跨平台原生遠端控制工作台*
 
