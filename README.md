@@ -4,9 +4,12 @@
 
 # Antigravity Remote (遠端控制中樞)
 
-> **Development home:** https://github.com/ImL1s/antigravity-remote  
-> Please open issues and pull requests there.  
-> **Mirrors:** [Codeberg](https://codeberg.org/ImL1s/antigravity-remote) · [GitLab](https://gitlab.com/aa22396584/antigravity-remote)
+**Development, Issues & Pull Requests:**  
+https://github.com/aa22396584/antigravity-remote
+
+**Mirrors:**  
+[GitLab](https://gitlab.com/aa22396584/antigravity-remote) ·
+[Codeberg](https://codeberg.org/ImL1s/antigravity-remote)
 
 
 **Next-Gen Cross-Platform Native Remote Deck for Antigravity (Google Jetski) Editor**  
@@ -17,9 +20,9 @@
 [![Riverpod](https://img.shields.io/badge/Riverpod-3.0-blueviolet?style=for-the-badge)](https://riverpod.dev)
 [![WebRTC](https://img.shields.io/badge/WebRTC-P2P_Mesh-FF6B6B?style=for-the-badge&logo=webrtc&logoColor=white)](https://webrtc.org)
 [![Security](https://img.shields.io/badge/ECDSA-NIST_P--256-00E676?style=for-the-badge)](https://csrc.nist.gov)
-[![Release](https://img.shields.io/badge/Release-v1.1.0-brightgreen?style=for-the-badge&logo=github)](https://github.com/ImL1s/antigravity-remote/releases/tag/v1.1.0)
-[![Tests](https://img.shields.io/badge/Tests-158%20Passed-00E5FF?style=for-the-badge&logo=flutter)](https://github.com/ImL1s/antigravity-remote/actions)
-[![Audit](https://img.shields.io/badge/Audit-34%20Issues-A855F7?style=for-the-badge)](https://github.com/ImL1s/antigravity-remote/issues/34)
+[![Release](https://img.shields.io/badge/Release-v1.1.0-brightgreen?style=for-the-badge&logo=github)](https://github.com/aa22396584/antigravity-remote/releases/tag/v1.1.0)
+[![Tests](https://img.shields.io/badge/Tests-158%20Passed-00E5FF?style=for-the-badge&logo=flutter)](https://github.com/aa22396584/antigravity-remote/actions)
+[![Audit](https://img.shields.io/badge/Audit-34%20Issues-A855F7?style=for-the-badge)](https://github.com/aa22396584/antigravity-remote/issues/34)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
 
 [繁體中文](#-繁體中文說明) • [English](#-english-documentation) • [📦 下載 Release](#-下載與安裝-download--releases) • [🛡️ 5 大 P0 防禦](#-5-大-p0-核心安全與控制可靠性防禦) • [📋 34 項稽核成果](#-2026-09-全面功能稽核成果) • [架構亮點](#-核心架構亮點) • [介面預覽](#-介面截圖預覽) • [快速開始](#-快速開始-getting-started)
@@ -44,8 +47,8 @@
 
 | 產物類型 | 下載 / 訪問連結 | 規格與校驗說明 |
 | :--- | :--- | :--- |
-| 🤖 **Android 生產級 APK** | [**antigravity-remote-v1.1.0.apk (112.8MB)**](https://github.com/ImL1s/antigravity-remote/releases/download/v1.1.0/antigravity-remote-v1.1.0.apk) / [app-release.apk](https://github.com/ImL1s/antigravity-remote/releases/download/v1.1.0/app-release.apk) | 支援 Android 7.0+ (API 24+)，通過 APK Signature Scheme v2 簽名驗證<br/>`SHA-256: 6bcf0eb7b44fabc7cc420b6a6ae61c71f5da32e332fbd7f776c07963c71c70fd` |
-| 🚀 **GitHub Release 官方頁面** | [**GitHub Releases / v1.1.0**](https://github.com/ImL1s/antigravity-remote/releases/tag/v1.1.0) | 官方正式發布頁面、二進位產物與驗證簽名 |
+| 🤖 **Android 生產級 APK** | [**antigravity-remote-v1.1.0.apk (112.8MB)**](https://github.com/aa22396584/antigravity-remote/releases/download/v1.1.0/antigravity-remote-v1.1.0.apk) / [app-release.apk](https://github.com/aa22396584/antigravity-remote/releases/download/v1.1.0/app-release.apk) | 支援 Android 7.0+ (API 24+)，通過 APK Signature Scheme v2 簽名驗證<br/>`SHA-256: 6bcf0eb7b44fabc7cc420b6a6ae61c71f5da32e332fbd7f776c07963c71c70fd` |
+| 🚀 **GitHub Release 官方頁面** | [**GitHub Releases / v1.1.0**](https://github.com/aa22396584/antigravity-remote/releases/tag/v1.1.0) | 官方正式發布頁面、二進位產物與驗證簽名 |
 | 📝 **結構化更新日誌** | [**CHANGELOG.md**](CHANGELOG.md) | 完整記錄本次 34 項 Issues 稽核成果與重大修復細節 |
 | 🗺️ **平台相容與能力矩陣** | [**docs/platform_matrix.md**](docs/platform_matrix.md) | 各作業系統功能支援級別（Android / iOS / macOS / Desktop） |
 | 📜 **協議相容性規格書** | [**docs/protocol/compatibility.md**](docs/protocol/compatibility.md) | 雙軌傳輸、5-byte 分幀規範與 RPC 端點定義 |
@@ -76,7 +79,7 @@
 <a name="-2026-09-全面功能稽核成果"></a>
 ### 📋 2026-09 全面功能稽核成果 (34 項 Issues 規範)
 
-本專案在 2026-09 完成了由社群與架構團隊發起的全面工程稽核（追蹤於 [Issue #34](https://github.com/ImL1s/antigravity-remote/issues/34)），涵蓋 33 項專業子任務與總體驗收體系：
+本專案在 2026-09 完成了由社群與架構團隊發起的全面工程稽核（追蹤於 [Issue #34](https://github.com/aa22396584/antigravity-remote/issues/34)），涵蓋 33 項專業子任務與總體驗收體系：
 
 - 🛡️ **核心控制與協議安全 (P0: 5 項)**：
   - [x] `#1` 切換／刪除裝置後控制目標一致性與原子清理
@@ -357,8 +360,8 @@ Latest Stable Release: **v1.1.0** (Build `1.1.0+2`, Released: 2026-09-06)
 
 | Artifact | Download Link | Description & Verification |
 | :--- | :--- | :--- |
-| 🤖 **Android Production APK** | [**antigravity-remote-v1.1.0.apk (112.8MB)**](https://github.com/ImL1s/antigravity-remote/releases/download/v1.1.0/antigravity-remote-v1.1.0.apk) / [app-release.apk](https://github.com/ImL1s/antigravity-remote/releases/download/v1.1.0/app-release.apk) | Compatible with Android 7.0+ (API 24+), verified with APK Signature Scheme v2<br/>`SHA-256: 6bcf0eb7b44fabc7cc420b6a6ae61c71f5da32e332fbd7f776c07963c71c70fd` |
-| 🚀 **GitHub Release Page** | [**GitHub Releases / v1.1.0**](https://github.com/ImL1s/antigravity-remote/releases/tag/v1.1.0) | Official release portal, binary distribution & sha256 checksums |
+| 🤖 **Android Production APK** | [**antigravity-remote-v1.1.0.apk (112.8MB)**](https://github.com/aa22396584/antigravity-remote/releases/download/v1.1.0/antigravity-remote-v1.1.0.apk) / [app-release.apk](https://github.com/aa22396584/antigravity-remote/releases/download/v1.1.0/app-release.apk) | Compatible with Android 7.0+ (API 24+), verified with APK Signature Scheme v2<br/>`SHA-256: 6bcf0eb7b44fabc7cc420b6a6ae61c71f5da32e332fbd7f776c07963c71c70fd` |
+| 🚀 **GitHub Release Page** | [**GitHub Releases / v1.1.0**](https://github.com/aa22396584/antigravity-remote/releases/tag/v1.1.0) | Official release portal, binary distribution & sha256 checksums |
 | 📝 **Changelog & Notes** | [**CHANGELOG.md**](CHANGELOG.md) | Granular changelog documenting all 34 audited issues and fixes |
 | 🗺️ **Platform Matrix** | [**docs/platform_matrix.md**](docs/platform_matrix.md) | Platform verification tiers across Android, iOS, macOS, Desktop |
 | 📜 **Protocol Compatibility** | [**docs/protocol/compatibility.md**](docs/protocol/compatibility.md) | Dual-Transport framing, RPC endpoints, and fail-closed state machine |
@@ -646,7 +649,7 @@ antigravity_remote/
 
 ```bash
 # 1. 克隆本儲存庫 (Clone repository)
-git clone https://github.com/ImL1s/antigravity-remote.git
+git clone https://github.com/aa22396584/antigravity-remote.git
 cd antigravity-remote
 
 # 2. 獲取相依套件 (Get dependencies)
